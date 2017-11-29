@@ -1,0 +1,11 @@
+[package]
+name = "astral-client"
+version = "0.1.0"
+authors = ["Dmitry Shlagoff <richyannet@yandex.ru>"]
+
+[dependencies.clippy]
+version = "*"
+optional = true
+
+[features]
+default = []
