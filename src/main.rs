@@ -48,7 +48,7 @@ struct Actor {
     life: f32
 }
 
-const PLAYER_LIFE: f32 = 1.0;
+const PLAYER_LIFE: f32 = 3.0;
 const SHOT_LIFE: f32 = 2.0;
 const ROCK_LIFE: f32 = 1.0;
 
@@ -307,7 +307,9 @@ impl MainState {
         for rock in &mut self.rocks {
             let distance = rock.pos - self.player.pos;
             if distance.norm() < (self.player.bbox_size + rock.bbox_size) {
-                self.player.life = 0.0;
+                self.player.life -= 1.0;
+                rock.life = 0.0;
+                continue;
             }
             for shot in &mut self.shots {
                 let distance = shot.pos - rock.pos;
