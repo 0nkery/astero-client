@@ -444,7 +444,7 @@ impl EventHandler for MainState {
          let old_line_width = graphics::get_line_width(ctx);
 
          graphics::set_color(ctx, (126, 203, 210, 127).into())?;
-         graphics::set_line_width(ctx, 3.0);
+         graphics::set_line_width(ctx, 4.0);
 
          let rect_x = (self.screen_width / 4 + 10) as f32;
          let rect_y = (self.screen_height - 30) as f32;
@@ -455,11 +455,11 @@ impl EventHandler for MainState {
 
          graphics::set_color(ctx, (253, 112, 119, 200).into())?;
 
-         let health_bar_width = (rect_width - 3.0) * (self.player.life / PLAYER_LIFE);
+         let health_bar_width = (rect_width - 4.0) * (self.player.life / PLAYER_LIFE);
 
          graphics::rectangle(ctx, graphics::DrawMode::Fill, graphics::Rect::new(
              rect_x, rect_y,
-             health_bar_width, rect_height - 3.0
+             health_bar_width, rect_height - 4.0
          ))?;
 
          graphics::set_color(ctx, old_color)?;
@@ -522,8 +522,8 @@ impl EventHandler for MainState {
 fn main() {
     let mut c = conf::Conf::new();
     c.window_title = "Astero".to_string();
-    c.window_width = 640;
-    c.window_height = 480;
+    c.window_width = 800;
+    c.window_height = 600;
 
     let ctx = &mut Context::load_from_conf("astero", "ggez", c).expect("Failed to load configuration");
 
