@@ -64,8 +64,9 @@ const MAX_ROCK_VEL: f32 = 50.0;
 const SPRITE_SIZE: u32 = 32;
 const SPRITE_HALF_SIZE: f32 = (SPRITE_SIZE / 2) as f32;
 
-const PLAYER_THRUST: f32 = 100.0;
-const PLAYER_TURN_RATE: f32 = 3.05;
+const PLAYER_ACCELERATION: f32 = 100.0;
+const PLAYER_DECELERATION: f32 = 10.0;
+const PLAYER_TURN_RATE: f32 = 2.05;
 const PLAYER_SHOT_TIME: f32 = 0.5;
 
 const MAX_PHYSICS_VEL: f32 = 250.0;
@@ -128,17 +129,25 @@ impl Actor {
                 self.facing += dt * PLAYER_TURN_RATE * input.xaxis;
 
                 if input.yaxis > 0.0 {
-                    self.player_thrust(dt);
+                    self.player_accelerate(dt);
+                } else if input.yaxis < 0.0 {
+                    self.player_decelerate(dt);
                 }
             },
             _ => {}
         }
     }
 
-    fn player_thrust(&mut self, dt: f32) {
+    fn player_accelerate(&mut self, dt: f32) {
         let direction_vector = vec_from_angle(self.facing);
-        let thrust_vector = direction_vector * PLAYER_THRUST;
-        self.velocity += thrust_vector * dt;
+        let acceleration = direction_vector * PLAYER_ACCELERATION;
+        self.velocity += acceleration * dt;
+    }
+
+    fn player_decelerate(&mut self, dt: f32) {
+        let direction_vector = vec_from_angle(self.facing + std::f32::consts::PI);
+        let deceleration_vector = direction_vector * PLAYER_DECELERATION;
+        self.velocity += deceleration_vector * dt;
     }
 
     fn update_position(&mut self, dt: f32) {
@@ -336,7 +345,7 @@ fn print_instructions() {
     println!("Welcome to ASTROBLASTO!");
     println!();
     println!("How to play:");
-    println!("L/R arrow keys rotate ship, up thrusts, space bar fires");
+    println!("L/R arrow keys rotate ship, up thrusts, down slows down, space bar fires");
     println!();
 }
 
@@ -441,13 +450,16 @@ impl EventHandler for MainState {
         _repeat: bool
     ) {
         match keycode {
-            Keycode::Up => {
+            Keycode::W | Keycode::Up => {
                 self.input.yaxis = 1.0;
             }
-            Keycode::Left => {
+            Keycode::S | Keycode::Down => {
+                self.input.yaxis = -1.0;
+            }
+            Keycode::A | Keycode::Left => {
                 self.input.xaxis = -1.0;
             }
-            Keycode::Right => {
+            Keycode::D | Keycode::Right => {
                 self.input.xaxis = 1.0;
             }
             Keycode::Space => {
@@ -465,10 +477,10 @@ impl EventHandler for MainState {
         _repeat: bool
     ) {
         match keycode {
-            Keycode::Up => {
-                self.input.yaxis = 1.0;
+            Keycode::W | Keycode::S | Keycode::Up | Keycode::Down => {
+                self.input.yaxis = 0.0;
             }
-            Keycode::Left | Keycode::Right => {
+            Keycode::A | Keycode::D | Keycode::Left | Keycode::Right => {
                 self.input.xaxis = 0.0;
             }
             Keycode::Space => {
