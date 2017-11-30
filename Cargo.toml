@@ -3,6 +3,11 @@ name = "astral-client"
 version = "0.1.0"
 authors = ["Dmitry Shlagoff <richyannet@yandex.ru>"]
 
+[dependencies]
+ggez = "0.3"
+rand = "0.3"
+nalgebra = "0.13"
+
 [dependencies.clippy]
 version = "*"
 optional = true
