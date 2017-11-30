@@ -342,7 +342,7 @@ impl MainState {
 
 fn print_instructions() {
     println!();
-    println!("Welcome to ASTROBLASTO!");
+    println!("Welcome to Astero!");
     println!();
     println!("How to play:");
     println!("L/R arrow keys rotate ship, up thrusts, down slows down, space bar fires");
@@ -493,11 +493,11 @@ impl EventHandler for MainState {
 
 fn main() {
     let mut c = conf::Conf::new();
-    c.window_title = "Astroblasto!".to_string();
+    c.window_title = "Astero".to_string();
     c.window_width = 640;
     c.window_height = 480;
 
-    let ctx = &mut Context::load_from_conf("astroblasto", "ggez", c).expect("Failed to load configuration");
+    let ctx = &mut Context::load_from_conf("astero", "ggez", c).expect("Failed to load configuration");
 
     match MainState::new(ctx) {
         Err(e) => {
