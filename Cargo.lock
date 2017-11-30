@@ -55,7 +55,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "astral-client"
+name = "astero-client"
 version = "0.1.0"
 dependencies = [
  "clippy 0.0.174 (registry+https://github.com/rust-lang/crates.io-index)",
