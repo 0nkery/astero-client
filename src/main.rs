@@ -127,7 +127,7 @@ impl Actor {
             ActorType::Player => {
                 self.facing += dt * PLAYER_TURN_RATE * input.xaxis;
 
-                if input.xaxis > 0.0 {
+                if input.yaxis > 0.0 {
                     self.player_thrust(dt);
                 }
             },
@@ -284,8 +284,7 @@ impl MainState {
         shot.pos = self.player.pos;
         shot.facing = self.player.facing;
         let direction = vec_from_angle(shot.facing);
-        shot.velocity.x = SHOT_SPEED * direction.x;
-        shot.velocity.y = SHOT_SPEED * direction.y;
+        shot.velocity = direction * SHOT_SPEED;
 
         self.shots.push(shot);
     }
