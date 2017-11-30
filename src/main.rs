@@ -365,6 +365,7 @@ fn draw_actor(
 }
 
 impl EventHandler for MainState {
+
     fn update(&mut self, ctx: &mut Context, _dt: Duration) -> GameResult<()> {
         const DESIRED_FPS: u64 = 60;
         if !timer::check_update_time(ctx, DESIRED_FPS) {
@@ -438,6 +439,31 @@ impl EventHandler for MainState {
 
          graphics::draw(ctx, &self.level_display, level_dest, 0.0)?;
          graphics::draw(ctx, &self.score_display, score_dest, 0.0)?;
+
+         let old_color = graphics::get_color(ctx);
+         let old_line_width = graphics::get_line_width(ctx);
+
+         graphics::set_color(ctx, (126, 203, 210, 127).into())?;
+         graphics::set_line_width(ctx, 3.0);
+
+         let rect_x = (self.screen_width / 4 + 10) as f32;
+         let rect_y = (self.screen_height - 30) as f32;
+         let rect_width = (self.screen_width / 2) as f32;
+         let rect_height = 30.0;
+
+         graphics::rectangle(ctx, graphics::DrawMode::Line, graphics::Rect::new(rect_x, rect_y, rect_width, rect_height))?;
+
+         graphics::set_color(ctx, (253, 112, 119, 200).into())?;
+
+         let health_bar_width = (rect_width - 3.0) * (self.player.life / PLAYER_LIFE);
+
+         graphics::rectangle(ctx, graphics::DrawMode::Fill, graphics::Rect::new(
+             rect_x, rect_y,
+             health_bar_width, rect_height - 3.0
+         ))?;
+
+         graphics::set_color(ctx, old_color)?;
+         graphics::set_line_width(ctx, old_line_width);
 
          graphics::present(ctx);
 
