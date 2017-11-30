@@ -1,5 +1,5 @@
 [package]
-name = "astral-client"
+name = "astero-client"
 version = "0.1.0"
 authors = ["Dmitry Shlagoff <richyannet@yandex.ru>"]
 
