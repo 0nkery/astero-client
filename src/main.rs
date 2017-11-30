@@ -305,8 +305,8 @@ impl MainState {
 
     fn handle_collisions(&mut self) {
         for rock in &mut self.rocks {
-            let pdistance = rock.pos - self.player.pos;
-            if pdistance.norm() < (self.player.bbox_size + rock.bbox_size) {
+            let distance = rock.pos - self.player.pos;
+            if distance.norm() < (self.player.bbox_size + rock.bbox_size) {
                 self.player.life = 0.0;
             }
             for shot in &mut self.shots {
