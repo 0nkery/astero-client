@@ -71,6 +71,13 @@ const PLAYER_SHOT_TIME: f32 = 0.5;
 
 const MAX_PHYSICS_VEL: f32 = 250.0;
 
+const RED: graphics::Color = graphics::Color {
+    r: 253.0 / 255.0,
+    g: 112.0 / 255.0,
+    b: 119.0 / 255.0,
+    a: 200.0 / 255.0,
+};
+
 
 impl Actor {
     fn create_player() -> Self {
@@ -363,7 +370,23 @@ fn draw_actor(
     let pos = world_to_screen_coords(screen_w, screen_h, actor.pos);
     let dest_point = graphics::Point::new(pos.x as f32, pos.y as f32);
     let image = assets.actor_image(actor);
-    graphics::draw(ctx, image, dest_point, actor.facing as f32)
+    graphics::draw(ctx, image, dest_point, actor.facing as f32)?;
+
+    if let ActorType::Rock = actor.tag {
+        let old_color = graphics::get_color(ctx);
+        graphics::set_color(ctx, RED)?;
+
+        let health_bar_width = SPRITE_SIZE as f32 * (actor.life / ROCK_LIFE);
+
+        graphics::rectangle(ctx, graphics::DrawMode::Fill, graphics::Rect::new(
+            pos.x, pos.y + SPRITE_HALF_SIZE + 4.0,
+            health_bar_width, 3.0
+        ))?;
+
+        graphics::set_color(ctx, old_color)?;
+    }
+
+    Ok(())
 }
 
 impl EventHandler for MainState {
@@ -455,7 +478,7 @@ impl EventHandler for MainState {
 
          graphics::rectangle(ctx, graphics::DrawMode::Line, graphics::Rect::new(rect_x, rect_y, rect_width, rect_height))?;
 
-         graphics::set_color(ctx, (253, 112, 119, 200).into())?;
+         graphics::set_color(ctx, RED)?;
 
          let health_bar_width = (rect_width - 4.0) * (self.player.life / PLAYER_LIFE);
 
