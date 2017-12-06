@@ -8,7 +8,6 @@ extern crate rand;
 extern crate nalgebra;
 
 extern crate futures;
-#[macro_use]
 extern crate tokio_core;
 
 use std::process;

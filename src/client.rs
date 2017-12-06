@@ -36,11 +36,11 @@ impl UdpCodec for ClientCodec {
 }
 
 
-pub fn start_client() -> (futures_mpsc::Sender<Msg>, std_mpsc::Receiver<Msg>) {
+pub fn start_client() -> (thread::JoinHandle<()>, futures_mpsc::UnboundedSender<Msg>, std_mpsc::Receiver<Msg>) {
     let (from_client_tx, from_client_rx) = std_mpsc::channel();
-    let (to_client_tx, to_client_rx) = futures_mpsc::channel(10);
+    let (to_client_tx, to_client_rx) = futures_mpsc::unbounded();
 
-    thread::spawn(move || {
+    let thread_handle = thread::spawn(move || {
         let server_address =
             "fe80::224:1dff:fe7f:5b83"
                 .parse::<SocketAddr>()
@@ -53,21 +53,23 @@ pub fn start_client() -> (futures_mpsc::Sender<Msg>, std_mpsc::Receiver<Msg>) {
         let socket =
             UdpSocket::bind(&client_address, &handle)
                 .expect("Failed to create socket");
-        let (outgoing, ingoing) =
+        let (mut outgoing, ingoing) =
             socket.framed(ClientCodec::new()).split();
+        let outgoing_ref = &mut outgoing;
 
         let receiver = ingoing.for_each(|msg| {
-            from_client_tx.send(msg);
+            from_client_tx.send(msg).expect("Failed to drop message to the main thread");
             Ok(())
         });
-        let sender = to_client_rx.for_each(|msg| {
-            outgoing.send(msg);
-            Ok(())
-        });
+        let sender =
+            to_client_rx.for_each(|msg| {
+                outgoing_ref.send(msg).wait().expect("Failed to send UDP packet");
+                Ok(())
+            }).map_err(|_err| io::ErrorKind::Other.into());
 
         let client = sender.join(receiver);
-        reactor.run(client);
+        reactor.run(client).expect("Failed to start client");
     });
 
-    (to_client_tx, from_client_rx)
+    (thread_handle, to_client_tx, from_client_rx)
 }
