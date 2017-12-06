@@ -23,6 +23,7 @@ use ggez::graphics;
 use ggez::timer;
 
 mod client;
+use client::Msg;
 
 
 type Point2 = nalgebra::Point2<f32>;
@@ -425,6 +426,16 @@ impl EventHandler for MainState {
         const DESIRED_FPS: u64 = 60;
         if !timer::check_update_time(ctx, DESIRED_FPS) {
             return Ok(())
+        }
+
+        if let Ok(msg) = self.client.from.try_recv() {
+            match msg {
+                Msg::OtherJoined(conn_id, nickname) => {
+                    println!("Player connected. ID - {}, nickname - {}", conn_id, nickname);
+                }
+
+                _ => {}
+            }
         }
 
         let seconds = 1.0 / (DESIRED_FPS as f32);
