@@ -1,10 +1,10 @@
 use std::io;
-use std::io::Write;
+use std::io::{Cursor, Write, Read};
 use std::net::{SocketAddr, Ipv6Addr, IpAddr};
 use std::thread;
 use std::sync::mpsc as std_mpsc;
 
-use byteorder::{BigEndian, WriteBytesExt};
+use byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
 use futures::{Stream, Sink, Future};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
@@ -12,21 +12,45 @@ use tokio_core::reactor::Core;
 
 
 pub enum Msg {
-    Join(String)
+    // client messages
+    Join(String),
+
+    // server messages
+    JoinAck(u16),
+    OtherJoined(u16, String),
 }
 
 impl Msg {
     pub fn from_bytes(buf: &[u8]) -> io::Result<Self> {
-        unimplemented!()
+        let mut rdr = Cursor::new(buf);
+
+        match rdr.read_i16::<BigEndian>()? {
+            0 => Ok(Msg::JoinAck(rdr.read_u16::<BigEndian>()?)),
+
+            1 => {
+                let conn_id = rdr.read_u16::<BigEndian>()?;
+                let nickname_length = rdr.read_u8()?;
+                let mut nickname = String::with_capacity(nickname_length as usize);
+                unsafe {
+                    rdr.read_exact(nickname.as_bytes_mut())?;
+                }
+
+                Ok(Msg::OtherJoined(conn_id, nickname))
+            }
+
+            _ => Err(io::ErrorKind::InvalidData.into()),
+        }
     }
 
     pub fn into_bytes(self, buf: &mut Vec<u8>) -> io::Result<()> {
         match self {
-            Msg::Join(username) => {
+            Msg::Join(nickname) => {
                 buf.write_u16::<BigEndian>(0)?;
-                buf.write_u8(username.len() as u8)?;
-                buf.write_all(username.as_bytes())?;
-            }
+                buf.write_u8(nickname.len() as u8)?;
+                buf.write_all(nickname.as_bytes())?;
+            },
+
+            _ => {}
         }
 
         Ok(())
