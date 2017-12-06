@@ -75,10 +75,11 @@ impl Client {
             let socket =
                 UdpSocket::bind(&client_address, &handle)
                     .expect("Failed to create socket");
-            let server_address =
-                "fe80::224:1dff:fe7f:5b83"
-                    .parse::<SocketAddr>()
-                    .expect("Failed to parse server address");
+
+            let server_address = SocketAddr::new(IpAddr::V6(Ipv6Addr::new(
+                0xfe80, 0, 0, 0, 0x0224, 0x1dff, 0xfe7f, 0x5b83
+            )), 11111);
+
             let (mut outgoing, ingoing) =
                 socket.framed(ClientCodec::new(server_address)).split();
             let outgoing_ref = &mut outgoing;
@@ -87,6 +88,7 @@ impl Client {
                 from_client_tx.send(msg).expect("Failed to drop message to the main thread");
                 Ok(())
             });
+
             let sender =
                 to_client_rx.for_each(|msg| {
                     outgoing_ref.send(msg).wait().expect("Failed to send UDP packet");
