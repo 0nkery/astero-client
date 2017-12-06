@@ -258,14 +258,19 @@ struct MainState {
     rocks: Vec<Actor>,
     level: usize,
     score: i32,
+
     assets: Assets,
     screen_width: u32,
     screen_height: u32,
+
     input: InputState,
     player_shot_timeout: f32,
+
     gui_dirty: bool,
     score_display: graphics::Text,
-    level_display: graphics::Text
+    level_display: graphics::Text,
+
+    client: client::Client,
 }
 
 impl MainState {
@@ -281,6 +286,8 @@ impl MainState {
         let player = Actor::create_player();
         let rocks = Actor::create_rocks(5, player.pos, 100.0, 250.0);
 
+        let client = client::Client::start();
+
         let s = MainState {
             player,
             shots: Vec::new(),
@@ -294,7 +301,8 @@ impl MainState {
             player_shot_timeout: 0.0,
             gui_dirty: true,
             score_display,
-            level_display
+            level_display,
+            client
         };
 
         Ok(s)
@@ -548,6 +556,12 @@ impl EventHandler for MainState {
             }
             _ => (),
         }
+    }
+
+    fn quit_event(&mut self) -> bool {
+        self.client.stop();
+
+        false
     }
 }
 
