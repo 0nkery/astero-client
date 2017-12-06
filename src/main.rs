@@ -7,6 +7,7 @@ extern crate ggez;
 extern crate rand;
 extern crate nalgebra;
 
+extern crate byteorder;
 extern crate futures;
 extern crate tokio_core;
 
@@ -294,9 +295,13 @@ impl MainState {
                 .file_name()
                 .expect("Failed to retrieve username")
                 .to_str()
-                .expect("Failed to convert username to Unicode");
+                .expect("Failed to convert username to Unicode")
+                .to_string();
 
         let client = client::Client::start();
+        client.to
+            .unbounded_send(client::Msg::Join(username))
+            .expect("Failed to drop message to the client thread");
 
         let s = MainState {
             player,

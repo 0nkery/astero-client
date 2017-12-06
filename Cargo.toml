@@ -9,6 +9,7 @@ rand = "0.3"
 nalgebra = "0.13"
 futures = "0.1"
 tokio-core = "0.1"
+byteorder = "1.2"
 
 [dependencies.clippy]
 version = "*"

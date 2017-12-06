@@ -1,8 +1,10 @@
 use std::io;
+use std::io::Write;
 use std::net::{SocketAddr, Ipv6Addr, IpAddr};
 use std::thread;
 use std::sync::mpsc as std_mpsc;
 
+use byteorder::{BigEndian, WriteBytesExt};
 use futures::{Stream, Sink, Future};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
@@ -10,7 +12,7 @@ use tokio_core::reactor::Core;
 
 
 pub enum Msg {
-
+    Join(String)
 }
 
 impl Msg {
@@ -18,8 +20,16 @@ impl Msg {
         unimplemented!()
     }
 
-    pub fn into_bytes(self, buf: &mut Vec<u8>) {
-        unimplemented!()
+    pub fn into_bytes(self, buf: &mut Vec<u8>) -> io::Result<()> {
+        match self {
+            Msg::Join(username) => {
+                buf.write_u16::<BigEndian>(0)?;
+                buf.write_u8(username.len() as u8)?;
+                buf.write_all(username.as_bytes())?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -49,7 +59,7 @@ impl UdpCodec for ClientCodec {
     }
 
     fn encode(&mut self, msg: Self::Out, buf: &mut Vec<u8>) -> SocketAddr {
-        msg.into_bytes(buf);
+        msg.into_bytes(buf).expect("Failed to serialize message");
 
         self.server
     }
@@ -58,8 +68,8 @@ impl UdpCodec for ClientCodec {
 
 pub struct Client {
     thread_handle: thread::JoinHandle<()>,
-    pub to_client: futures_mpsc::UnboundedSender<Msg>,
-    pub from_client: std_mpsc::Receiver<Msg>
+    pub to: futures_mpsc::UnboundedSender<Msg>,
+    pub from: std_mpsc::Receiver<Msg>
 }
 
 impl Client {
@@ -101,8 +111,8 @@ impl Client {
 
         Client {
             thread_handle,
-            to_client: to_client_tx,
-            from_client: from_client_rx
+            to: to_client_tx,
+            from: from_client_rx
         }
     }
 
