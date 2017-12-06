@@ -340,7 +340,7 @@ impl MainState {
             let distance = rock.pos - self.player.pos;
             if distance.norm() < (self.player.bbox_size + rock.bbox_size) {
                 self.player.life -= 1.0;
-                rock.life -= 1.0;
+                rock.life = 0.0;
                 continue;
             }
             for shot in &mut self.shots {
