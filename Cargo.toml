@@ -7,6 +7,8 @@ authors = ["Dmitry Shlagoff <richyannet@yandex.ru>"]
 ggez = "0.3"
 rand = "0.3"
 nalgebra = "0.13"
+futures = "0.1"
+tokio-core = "0.1"
 
 [dependencies.clippy]
 version = "*"

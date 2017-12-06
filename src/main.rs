@@ -1,9 +1,15 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", feature(clippy))]
 
+#![feature(ip_constructors)]
+
 extern crate ggez;
 extern crate rand;
 extern crate nalgebra;
+
+extern crate futures;
+#[macro_use]
+extern crate tokio_core;
 
 use std::process;
 use std::thread;
@@ -14,6 +20,8 @@ use ggez::event::*;
 use ggez::{Context, GameResult};
 use ggez::graphics;
 use ggez::timer;
+
+mod client;
 
 
 type Point2 = nalgebra::Point2<f32>;
