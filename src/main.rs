@@ -10,6 +10,7 @@ extern crate nalgebra;
 extern crate futures;
 extern crate tokio_core;
 
+use std::env;
 use std::process;
 use std::thread;
 use std::time::Duration;
@@ -285,6 +286,15 @@ impl MainState {
 
         let player = Actor::create_player();
         let rocks = Actor::create_rocks(5, player.pos, 100.0, 250.0);
+
+        let home_dir = env::home_dir().expect("Failed to retrieve home dir");
+        let username =
+            home_dir
+                .as_path()
+                .file_name()
+                .expect("Failed to retrieve username")
+                .to_str()
+                .expect("Failed to convert username to Unicode");
 
         let client = client::Client::start();
 
