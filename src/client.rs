@@ -58,8 +58,8 @@ impl UdpCodec for ClientCodec {
 
 pub struct Client {
     thread_handle: thread::JoinHandle<()>,
-    to_client: futures_mpsc::UnboundedSender<Msg>,
-    from_client: std_mpsc::Receiver<Msg>
+    pub to_client: futures_mpsc::UnboundedSender<Msg>,
+    pub from_client: std_mpsc::Receiver<Msg>
 }
 
 impl Client {
