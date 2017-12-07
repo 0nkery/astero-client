@@ -430,6 +430,9 @@ impl EventHandler for MainState {
 
         if let Ok(msg) = self.client.from.try_recv() {
             match msg {
+                Msg::JoinAck(conn_id) => {
+                    println!("Connected to server. Conn ID - {}", conn_id);
+                }
                 Msg::OtherJoined(conn_id, nickname) => {
                     println!("Player connected. ID - {}, nickname - {}", conn_id, nickname);
                 }
