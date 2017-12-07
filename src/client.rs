@@ -32,11 +32,14 @@ impl Msg {
 
             1 => {
                 let conn_id = rdr.read_u16::<BigEndian>()?;
-                let nickname_length = rdr.read_u8()?;
-                let mut nickname = String::with_capacity(nickname_length as usize);
-                unsafe {
-                    rdr.read_exact(nickname.as_bytes_mut())?;
-                }
+                let nickname_length = rdr.read_u8()? as usize;
+
+                let mut nickname = Vec::with_capacity(nickname_length);
+                let nickname = unsafe {
+                    nickname.set_len(nickname_length);
+                    rdr.read_exact(nickname.as_mut_slice())?;
+                    String::from_utf8_unchecked(nickname)
+                };
 
                 Ok(Msg::OtherJoined(conn_id, nickname))
             }
