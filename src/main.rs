@@ -11,6 +11,7 @@ extern crate byteorder;
 extern crate futures;
 extern crate tokio_core;
 
+use std::collections::HashMap;
 use std::env;
 use std::process;
 use std::thread;
@@ -261,6 +262,7 @@ struct MainState {
     rocks: Vec<Actor>,
     level: usize,
     score: i32,
+    others: HashMap<u16, String>,
 
     assets: Assets,
     screen_width: u32,
@@ -310,14 +312,19 @@ impl MainState {
             rocks,
             level: 0,
             score: 0,
+            others: HashMap::new(),
+
             assets,
             screen_width: ctx.conf.window_width,
             screen_height: ctx.conf.window_height,
+
             input: InputState::default(),
             player_shot_timeout: 0.0,
+
             gui_dirty: true,
             score_display,
             level_display,
+
             client
         };
 
@@ -435,6 +442,7 @@ impl EventHandler for MainState {
                 }
                 Msg::OtherJoined(conn_id, nickname) => {
                     println!("Player connected. ID - {}, nickname - {}", conn_id, nickname);
+                    self.others.insert(conn_id, nickname);
                 }
 
                 _ => {}
