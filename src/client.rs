@@ -1,6 +1,6 @@
 use std::io;
 use std::io::{Cursor, Write, Read};
-use std::net::{SocketAddr, Ipv6Addr, IpAddr};
+use std::net::{SocketAddr, SocketAddrV6, Ipv6Addr, IpAddr};
 use std::thread;
 use std::sync::mpsc as std_mpsc;
 
@@ -11,6 +11,7 @@ use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::Core;
 
 
+#[derive(Debug)]
 pub enum Msg {
     // client messages
     Join(String),
@@ -63,7 +64,10 @@ struct ClientCodec {
 }
 
 impl ClientCodec {
-    pub fn new(server: SocketAddr) -> Self {
+    pub fn new() -> Self {
+        let addr = Ipv6Addr::new(0xfe80, 0, 0, 0, 0x0224, 0x1dff, 0xfe7f, 0x5b83);
+        let server = SocketAddr::V6(SocketAddrV6::new(addr, 11111, 0, 1));
+
         ClientCodec {
             server
         }
@@ -110,12 +114,8 @@ impl Client {
                 UdpSocket::bind(&client_address, &handle)
                     .expect("Failed to create socket");
 
-            let server_address = SocketAddr::new(IpAddr::V6(Ipv6Addr::new(
-                0xfe80, 0, 0, 0, 0x0224, 0x1dff, 0xfe7f, 0x5b83
-            )), 11111);
-
             let (mut outgoing, ingoing) =
-                socket.framed(ClientCodec::new(server_address)).split();
+                socket.framed(ClientCodec::new()).split();
             let outgoing_ref = &mut outgoing;
 
             let receiver = ingoing.for_each(|msg| {
