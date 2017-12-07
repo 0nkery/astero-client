@@ -13,6 +13,8 @@ use tokio_core::reactor::Core;
 
 #[derive(Debug)]
 pub enum Msg {
+    // helper messages
+    Unknown,
     // client messages
     Join(String),
 
@@ -39,7 +41,7 @@ impl Msg {
                 Ok(Msg::OtherJoined(conn_id, nickname))
             }
 
-            _ => Err(io::ErrorKind::InvalidData.into()),
+            _ => Ok(Msg::Unknown),
         }
     }
 
@@ -80,7 +82,7 @@ impl UdpCodec for ClientCodec {
 
     fn decode(&mut self, src: &SocketAddr, buf: &[u8]) -> io::Result<Self::In> {
         if *src != self.server {
-            return Err(io::ErrorKind::InvalidInput.into());
+            return Ok(Msg::Unknown);
         }
 
         Msg::from_bytes(buf)
