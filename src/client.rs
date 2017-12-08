@@ -5,7 +5,7 @@ use std::thread;
 use std::sync::mpsc as std_mpsc;
 
 use byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
-use futures::{Stream, Sink, Future};
+use futures::{Stream, Sink, Future, future};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::Core;
@@ -15,6 +15,8 @@ use tokio_core::reactor::Core;
 pub enum Msg {
     // helper messages
     Unknown,
+    Abort,
+
     // client messages
     Join(String),
     Leave,
@@ -135,17 +137,27 @@ impl Client {
             let from_main_thread = from_main_thread
                 .map_err(|_err| -> io::Error {
                     io::ErrorKind::Other.into()
-                })
-                .map(|msg| {
-                    if let Msg::Leave = msg {
-
-                    }
                 });
+
+            let outgoing = outgoing.with(|msg| {
+                if let Msg::Abort = msg {
+                    future::err(io::ErrorKind::Interrupted.into())
+                } else {
+                    future::ok(msg)
+                }
+            });
 
             let sender = outgoing.send_all(from_main_thread);
 
             let client = sender.join(receiver);
-            reactor.run(client).expect("Failed to start client");
+            let exit_reason = reactor.run(client);
+
+            if let Err(err) = exit_reason {
+                match err.kind() {
+                    io::ErrorKind::Interrupted => {},
+                    _ => panic!("{}", err)
+                };
+            }
         });
 
         Client {
@@ -157,6 +169,7 @@ impl Client {
 
     pub fn stop(&mut self) {
         self.send(Msg::Leave);
+        self.send(Msg::Abort);
 
         self.thread_handle
             .take()
