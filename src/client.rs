@@ -31,8 +31,8 @@ impl Msg {
     pub fn from_bytes(buf: &[u8]) -> io::Result<Self> {
         let mut rdr = Cursor::new(buf);
 
-        match rdr.read_i16::<BigEndian>()? {
-            0 => Ok(Msg::JoinAck(rdr.read_u16::<BigEndian>()?)),
+        let msg = match rdr.read_i16::<BigEndian>()? {
+            0 => Msg::JoinAck(rdr.read_u16::<BigEndian>()?),
 
             1 => {
                 let conn_id = rdr.read_u16::<BigEndian>()?;
@@ -45,17 +45,19 @@ impl Msg {
                     String::from_utf8_unchecked(nickname)
                 };
 
-                Ok(Msg::OtherJoined(conn_id, nickname))
+                Msg::OtherJoined(conn_id, nickname)
             },
 
             2 => {
                 let conn_id = rdr.read_u16::<BigEndian>()?;
 
-                Ok(Msg::OtherLeft(conn_id))
+                Msg::OtherLeft(conn_id)
             }
 
-            _ => Ok(Msg::Unknown),
-        }
+            _ => Msg::Unknown,
+        };
+
+        Ok(msg)
     }
 
     pub fn into_bytes(self, buf: &mut Vec<u8>) -> io::Result<()> {
