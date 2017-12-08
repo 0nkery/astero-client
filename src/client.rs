@@ -84,8 +84,7 @@ struct ClientCodec {
 
 impl ClientCodec {
     pub fn new() -> Self {
-        let addr = Ipv6Addr::new(0xfe80, 0, 0, 0, 0x0224, 0x1dff, 0xfe7f, 0x5b83);
-        let server = SocketAddr::V6(SocketAddrV6::new(addr, 11111, 0, 2));
+        let server = SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::unspecified(), 11111, 0, 2));
 
         ClientCodec {
             server
