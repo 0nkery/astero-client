@@ -84,7 +84,7 @@ struct ClientCodec {
 
 impl ClientCodec {
     pub fn new() -> Self {
-        let server = SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::unspecified(), 11111, 0, 2));
+        let server = SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::localhost(), 11111, 0, 0));
 
         ClientCodec {
             server
@@ -127,7 +127,7 @@ impl Client {
             let mut reactor = Core::new().expect("Failed to init reactor");
             let handle = reactor.handle();
 
-            let client_address = SocketAddr::new(IpAddr::V6(Ipv6Addr::unspecified()), 0);
+            let client_address = SocketAddr::new(IpAddr::V6(Ipv6Addr::localhost()), 0);
             let socket =
                 UdpSocket::bind(&client_address, &handle)
                     .expect("Failed to create socket");
