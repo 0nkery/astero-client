@@ -433,7 +433,7 @@ impl EventHandler for MainState {
             return Ok(())
         }
 
-        if let Ok(msg) = self.client.from.try_recv() {
+        if let Ok(msg) = self.client.try_recv() {
             match msg {
                 Msg::JoinAck(conn_id) => {
                     println!("Connected to server. Conn ID - {}", conn_id);
