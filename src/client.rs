@@ -105,7 +105,7 @@ impl UdpCodec for ClientCodec {
 
 
 pub struct Client {
-    thread_handle: thread::JoinHandle<()>,
+    thread_handle: Option<thread::JoinHandle<()>>,
     to: futures_mpsc::UnboundedSender<Msg>,
     from: std_mpsc::Receiver<Msg>
 }
@@ -133,7 +133,14 @@ impl Client {
             });
 
             let from_main_thread = from_main_thread
-                .map_err(|_| -> io::Error { io::ErrorKind::Other.into() });
+                .map_err(|_err| -> io::Error {
+                    io::ErrorKind::Other.into()
+                })
+                .map(|msg| {
+                    if let Msg::Leave = msg {
+
+                    }
+                });
 
             let sender = outgoing.send_all(from_main_thread);
 
@@ -142,7 +149,7 @@ impl Client {
         });
 
         Client {
-            thread_handle,
+            thread_handle: Some(thread_handle),
             to: to_client,
             from: from_client
         }
@@ -150,6 +157,12 @@ impl Client {
 
     pub fn stop(&mut self) {
         self.send(Msg::Leave);
+
+        self.thread_handle
+            .take()
+            .unwrap()
+            .join()
+            .expect("Failed to stop client thread");
     }
 
     pub fn send(&self, msg: Msg) {
