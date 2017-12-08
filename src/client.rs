@@ -145,7 +145,6 @@ impl Client {
 
             handle.spawn(receiver);
 
-
             let from_main_thread = from_main_thread
                 .map_err(|_err| -> io::Error {
                     io::ErrorKind::Other.into()
