@@ -5,7 +5,7 @@ use std::thread;
 use std::sync::mpsc as std_mpsc;
 
 use byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
-use futures::{Stream, Sink, Future, future};
+use futures::{Stream, Sink, Future};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::Core;
@@ -15,7 +15,6 @@ use tokio_core::reactor::Core;
 pub enum Msg {
     // helper messages
     Unknown,
-    Abort,
 
     // client messages
     Join(String),
@@ -116,7 +115,7 @@ impl UdpCodec for ClientCodec {
 
 pub struct Client {
     thread_handle: Option<thread::JoinHandle<()>>,
-    to: futures_mpsc::UnboundedSender<Msg>,
+    to: Option<futures_mpsc::UnboundedSender<Msg>>,
     from: std_mpsc::Receiver<Msg>
 }
 
@@ -137,47 +136,40 @@ impl Client {
             let (outgoing, ingoing) =
                 socket.framed(ClientCodec::new()).split();
 
-            let receiver = ingoing.for_each(|msg| {
+            // Receiver is spawned separately. We don't care much about received packets
+            // when we're going to exit this thread.
+            let receiver = ingoing.for_each(move |msg| {
                 to_main_thread.send(msg).expect("Failed to drop message to the main thread");
                 Ok(())
-            });
+            }).map_err(|err| panic!("{}", err));
+
+            handle.spawn(receiver);
+
 
             let from_main_thread = from_main_thread
                 .map_err(|_err| -> io::Error {
                     io::ErrorKind::Other.into()
                 });
 
-            let outgoing = outgoing.with(|msg| {
-                if let Msg::Abort = msg {
-                    future::err(io::ErrorKind::Interrupted.into())
-                } else {
-                    future::ok(msg)
-                }
-            });
-
+            // But `from_main_thread` stream should terminate in order to shutdown this thread.
             let sender = outgoing.send_all(from_main_thread);
 
-            let client = sender.join(receiver);
-            let exit_reason = reactor.run(client);
-
-            if let Err(err) = exit_reason {
-                match err.kind() {
-                    io::ErrorKind::Interrupted => {},
-                    _ => panic!("{}", err)
-                };
-            }
+            reactor.run(sender).expect("Client thread failure");
         });
 
         Client {
             thread_handle: Some(thread_handle),
-            to: to_client,
+            to: Some(to_client),
             from: from_client
         }
     }
 
     pub fn stop(&mut self) {
         self.send(Msg::Leave);
-        self.send(Msg::Abort);
+
+        // Dropping `to` causes Sink-part of UdpFramed to flush all pending packets and exit.
+        let sender = self.to.take().unwrap();
+        drop(sender);
 
         self.thread_handle
             .take()
@@ -187,7 +179,7 @@ impl Client {
     }
 
     pub fn send(&self, msg: Msg) {
-        self.to.unbounded_send(msg)
+        self.to.as_ref().unwrap().unbounded_send(msg)
             .expect("Failed to drop message to client thread");
     }
 
