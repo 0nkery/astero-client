@@ -17,6 +17,7 @@ pub enum Msg {
     Unknown,
     // client messages
     Join(String),
+    Leave,
 
     // server messages
     JoinAck(u16),
@@ -54,6 +55,10 @@ impl Msg {
                 buf.write_u16::<BigEndian>(0)?;
                 buf.write_u8(nickname.len() as u8)?;
                 buf.write_all(nickname.as_bytes())?;
+            },
+
+            Msg::Leave => {
+                buf.write_u16::<BigEndian>(1)?;
             },
 
             _ => {}
@@ -144,7 +149,7 @@ impl Client {
     }
 
     pub fn stop(&mut self) {
-
+        self.send(Msg::Leave);
     }
 
     pub fn send(&self, msg: Msg) {
