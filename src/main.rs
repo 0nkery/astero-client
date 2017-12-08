@@ -302,9 +302,7 @@ impl MainState {
                 .to_string();
 
         let client = client::Client::start();
-        client.to
-            .unbounded_send(client::Msg::Join(username))
-            .expect("Failed to drop message to the client thread");
+        client.send(client::Msg::Join(username));
 
         let s = MainState {
             player,

@@ -101,7 +101,7 @@ impl UdpCodec for ClientCodec {
 
 pub struct Client {
     thread_handle: thread::JoinHandle<()>,
-    pub to: futures_mpsc::UnboundedSender<Msg>,
+    to: futures_mpsc::UnboundedSender<Msg>,
     pub from: std_mpsc::Receiver<Msg>
 }
 
@@ -145,5 +145,10 @@ impl Client {
 
     pub fn stop(&mut self) {
 
+    }
+
+    pub fn send(&self, msg: Msg) {
+        self.to.unbounded_send(msg)
+            .expect("Failed to drop message to client thread");
     }
 }
