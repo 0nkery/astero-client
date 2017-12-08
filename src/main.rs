@@ -302,7 +302,7 @@ impl MainState {
                 .to_string();
 
         let client = client::Client::start();
-        client.send(client::Msg::Join(username));
+        client.send(Msg::Join(username));
 
         let s = MainState {
             player,
@@ -441,6 +441,10 @@ impl EventHandler for MainState {
                 Msg::OtherJoined(conn_id, nickname) => {
                     println!("Player connected. ID - {}, nickname - {}", conn_id, nickname);
                     self.others.insert(conn_id, nickname);
+                }
+                Msg::OtherLeft(conn_id) => {
+                    let nickname = self.others.remove(&conn_id).unwrap();
+                    println!("Player disconnected. ID - {}, nickname - {}", conn_id, nickname);
                 }
 
                 _ => {}

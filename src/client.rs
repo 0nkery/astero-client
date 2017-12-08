@@ -24,6 +24,7 @@ pub enum Msg {
     // server messages
     JoinAck(u16),
     OtherJoined(u16, String),
+    OtherLeft(u16),
 }
 
 impl Msg {
@@ -45,6 +46,12 @@ impl Msg {
                 };
 
                 Ok(Msg::OtherJoined(conn_id, nickname))
+            },
+
+            2 => {
+                let conn_id = rdr.read_u16::<BigEndian>()?;
+
+                Ok(Msg::OtherLeft(conn_id))
             }
 
             _ => Ok(Msg::Unknown),
