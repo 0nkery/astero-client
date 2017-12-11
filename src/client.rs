@@ -1,20 +1,23 @@
 use std::io;
 use std::io::{Cursor, Write, Read};
+use std::iter::repeat;
 use std::net::{SocketAddr, SocketAddrV6, Ipv6Addr, IpAddr};
 use std::thread;
+use std::time::Duration;
 use std::sync::mpsc as std_mpsc;
 
 use byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
-use futures::{Stream, Sink, Future};
+use futures::{Stream, Sink, Future, stream};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
-use tokio_core::reactor::Core;
+use tokio_core::reactor::{Core, Timeout};
 
 
 #[derive(Debug)]
 pub enum Msg {
-    // helper messages
+    // helper messages (for internal game client usage)
     Unknown,
+    ServerNotResponding,
 
     // client messages
     Join(String),
@@ -124,7 +127,8 @@ impl UdpCodec for ClientCodec {
 pub struct Client {
     thread_handle: Option<thread::JoinHandle<()>>,
     to: Option<futures_mpsc::UnboundedSender<Msg>>,
-    from: std_mpsc::Receiver<Msg>
+    from: std_mpsc::Receiver<Msg>,
+    timeouts: u32,
 }
 
 impl Client {
@@ -144,13 +148,28 @@ impl Client {
             let (outgoing, ingoing) =
                 socket.framed(ClientCodec::new()).split();
 
-            // Receiver is spawned separately. We don't care much about received packets
-            // when we're going to exit this thread.
+            // Stream of timeouts. Selected with network messages.
+            // If timeout comes first it means that server is not sending any data.
+            let timeout_handle = handle.clone();
+            let timeouts =
+                stream::iter_result::<_, _, ()>(repeat(Ok(())))
+                    .and_then(move |()|
+                        Timeout::new(Duration::new(6, 0), &timeout_handle)
+                            .expect("Failed to setup timeout")
+                            .map_err(|err| panic!("{}", err))
+                    )
+                    .map(|_| Msg::ServerNotResponding)
+                    .map_err(|_| io::ErrorKind::Other.into());
+
+            let ingoing = ingoing.select(timeouts);
+
             let receiver = ingoing.for_each(move |msg| {
                 to_main_thread.send(msg).expect("Failed to drop message to the main thread");
                 Ok(())
             }).map_err(|err| panic!("{}", err));
 
+            // Receiver is spawned separately. We don't care much about received packets
+            // when we're going to exit this thread.
             handle.spawn(receiver);
 
             let from_main_thread = from_main_thread
@@ -167,7 +186,8 @@ impl Client {
         Client {
             thread_handle: Some(thread_handle),
             to: Some(to_client),
-            from: from_client
+            from: from_client,
+            timeouts: 0
         }
     }
 
@@ -190,11 +210,30 @@ impl Client {
             .expect("Failed to drop message to client thread");
     }
 
-    pub fn try_recv(&self) -> Result<Msg, std_mpsc::TryRecvError> {
+    pub fn try_recv(&mut self) -> Result<Msg, std_mpsc::TryRecvError> {
         match self.from.try_recv() {
-            Ok(Msg::ServerHeartbeat) => {
-                self.send(Msg::ClientHeartbeat);
-                self.from.try_recv()
+            Ok(Msg::Unknown) => self.try_recv(),
+
+            Ok(Msg::ServerNotResponding) => {
+                self.timeouts += 1;
+                println!("Got ServerNotResponding. Timeouts - {}", self.timeouts);
+                if self.timeouts >= 3 {
+                    return Ok(Msg::ServerNotResponding);
+                }
+
+                self.try_recv()
+            }
+
+            Ok(msg) => {
+                self.timeouts = 0;
+                match msg {
+                    Msg::ServerHeartbeat => {
+                        self.send(Msg::ClientHeartbeat);
+                        self.try_recv()
+                    }
+
+                    _ => Ok(msg)
+                }
             }
 
             other => other

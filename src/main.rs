@@ -446,6 +446,10 @@ impl EventHandler for MainState {
                     let nickname = self.others.remove(&conn_id).unwrap();
                     println!("Player disconnected. ID - {}, nickname - {}", conn_id, nickname);
                 }
+                Msg::ServerNotResponding => {
+                    println!("Server is not available! Closing game...");
+                    ctx.quit()?;
+                }
 
                 _ => {}
             }
