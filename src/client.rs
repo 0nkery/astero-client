@@ -19,11 +19,13 @@ pub enum Msg {
     // client messages
     Join(String),
     Leave,
+    ClientHeartbeat,
 
     // server messages
     JoinAck(u16),
     OtherJoined(u16, String),
     OtherLeft(u16),
+    ServerHeartbeat,
 }
 
 impl Msg {
@@ -45,7 +47,7 @@ impl Msg {
                 };
 
                 Msg::OtherJoined(conn_id, nickname)
-            },
+            }
 
             2 => {
                 let conn_id = rdr.read_u16::<BigEndian>()?;
@@ -53,7 +55,9 @@ impl Msg {
                 Msg::OtherLeft(conn_id)
             }
 
-            _ => Msg::Unknown,
+            3 => Msg::ServerHeartbeat,
+
+            _ => Msg::Unknown
         };
 
         Ok(msg)
@@ -65,11 +69,15 @@ impl Msg {
                 buf.write_u16::<BigEndian>(0)?;
                 buf.write_u8(nickname.len() as u8)?;
                 buf.write_all(nickname.as_bytes())?;
-            },
+            }
 
             Msg::Leave => {
                 buf.write_u16::<BigEndian>(1)?;
-            },
+            }
+
+            Msg::ClientHeartbeat => {
+                buf.write_u16::<BigEndian>(2)?;
+            }
 
             _ => {}
         }
@@ -183,6 +191,13 @@ impl Client {
     }
 
     pub fn try_recv(&self) -> Result<Msg, std_mpsc::TryRecvError> {
-        self.from.try_recv()
+        match self.from.try_recv() {
+            Ok(Msg::ServerHeartbeat) => {
+                self.send(Msg::ClientHeartbeat);
+                self.from.try_recv()
+            }
+
+            other => other
+        }
     }
 }
