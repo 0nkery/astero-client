@@ -25,7 +25,7 @@ pub enum Msg {
     ClientHeartbeat,
 
     // server messages
-    JoinAck(u16),
+    JoinAck(u16, f32, f32),
     OtherJoined(u16, String),
     OtherLeft(u16),
     ServerHeartbeat,
@@ -36,7 +36,13 @@ impl Msg {
         let mut rdr = Cursor::new(buf);
 
         let msg = match rdr.read_i16::<BigEndian>()? {
-            0 => Msg::JoinAck(rdr.read_u16::<BigEndian>()?),
+            0 => {
+                let id = rdr.read_u16::<BigEndian>()?;
+                let x = rdr.read_u16::<BigEndian>()? as f32;
+                let y = rdr.read_u16::<BigEndian>()? as f32;
+
+                Msg::JoinAck(id, x, y)
+            },
 
             1 => {
                 let conn_id = rdr.read_u16::<BigEndian>()?;
