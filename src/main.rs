@@ -23,10 +23,9 @@ use ggez::{Context, GameResult};
 use ggez::graphics;
 use ggez::timer;
 
+
 mod client;
 use client::Msg;
-
-mod health_bar;
 
 mod constant;
 use constant::{
@@ -49,20 +48,17 @@ use constant::{
 };
 use constant::gui::HEALTH_BAR_SIZE;
 
+mod health_bar;
+mod player;
 
-type Point2 = nalgebra::Point2<f32>;
-type Vector2 = nalgebra::Vector2<f32>;
+mod util;
+use util::{
+    Point2,
+    Vector2,
+    vec_from_angle,
+    random_vec
+};
 
-
-fn vec_from_angle(angle: f32) -> Vector2 {
-    Vector2::new(angle.sin(), angle.cos())
-}
-
-fn random_vec(max_magnitude: f32) -> Vector2 {
-    let angle = rand::random::<f32>() * 2.0 * std::f32::consts::PI;
-    let mag = rand::random::<f32>() * max_magnitude;
-    vec_from_angle(angle) * (mag)
-}
 
 #[derive(Debug)]
 enum ActorType {
