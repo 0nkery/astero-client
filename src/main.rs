@@ -66,7 +66,7 @@ trait Movable {
     fn set_velocity(&mut self, velocity: Vector2);
 
     #[inline]
-    fn pos(&self) -> Point2;
+    fn pos(&self) -> Option<Point2>;
     #[inline]
     fn set_pos(&mut self, pos: Point2);
 
@@ -81,6 +81,10 @@ trait Movable {
     fn set_rvel(&mut self, rvel: f32);
 
     fn update_position(&mut self, dt: f32) {
+        if self.pos().is_none() {
+            return;
+        }
+
         let mut velocity = self.velocity();
         let norm_sq = velocity.norm_squared();
         if norm_sq > MAX_PHYSICS_VEL.powi(2) {
@@ -89,7 +93,7 @@ trait Movable {
         self.set_velocity(velocity);
 
         let dv = velocity * dt;
-        let pos = self.pos() + dv;
+        let pos = self.pos().unwrap() + dv;
         self.set_pos(pos);
 
         let facing = self.facing() + self.rvel();
@@ -97,9 +101,13 @@ trait Movable {
     }
 
     fn wrap_position(&mut self, sx: f32, sy: f32) {
+        if self.pos().is_none() {
+            return;
+        }
+
         let screen_x_bounds = sx / 2.0;
         let screen_y_bounds = sy / 2.0;
-        let mut pos = self.pos();
+        let mut pos = self.pos().unwrap();
 
         let center = pos - Vector2::new(-SPRITE_HALF_SIZE, SPRITE_HALF_SIZE);
 
@@ -189,8 +197,8 @@ impl Movable for Actor {
         self.velocity = velocity;
     }
 
-    fn pos(&self) -> Point2 {
-        self.pos
+    fn pos(&self) -> Option<Point2> {
+        Some(self.pos)
     }
 
     fn set_pos(&mut self, pos: Point2) {
@@ -357,9 +365,13 @@ impl MainState {
     }
 
     fn fire_player_shot(&mut self) {
+        if self.player.pos().is_none() {
+            return;
+        }
+
         self.player_shot_timeout = PLAYER_SHOT_TIME;
         let mut shot = Actor::create_shot();
-        shot.pos = self.player.pos();
+        shot.pos = self.player.pos().unwrap();
         shot.facing = self.player.facing();
         let direction = vec_from_angle(shot.facing);
         shot.velocity = direction * SHOT_SPEED;
@@ -373,12 +385,16 @@ impl MainState {
 
     fn handle_collisions(&mut self) {
         for rock in &mut self.rocks {
-            let distance = rock.pos - self.player.pos();
-            if distance.norm() < (self.player.bbox_size() + rock.bbox_size) {
-                self.player.damage(1.0);
-                rock.life = 0.0;
-                continue;
+
+            if let Some(ref pos) = self.player.pos() {
+                let distance = rock.pos - pos;
+                if distance.norm() < (self.player.bbox_size() + rock.bbox_size) {
+                    self.player.damage(1.0);
+                    rock.life = 0.0;
+                    continue;
+                }
             }
+
             for shot in &mut self.shots {
                 let distance = shot.pos - rock.pos;
                 if distance.norm() < (shot.bbox_size + rock.bbox_size) {
@@ -397,7 +413,7 @@ impl MainState {
         if self.rocks.is_empty() {
             self.level += 1;
             self.gui_dirty = true;
-            let r = Actor::create_rocks(self.level + 5, self.player.pos(), 100.0, 250.0);
+            let r = Actor::create_rocks(self.level + 5, self.player.pos().unwrap(), 100.0, 250.0);
             self.rocks.extend(r);
         }
     }
@@ -455,6 +471,7 @@ impl EventHandler for MainState {
             match msg {
                 Msg::JoinAck(conn_id, x, y) => {
                     println!("Connected to server. Conn ID - {}", conn_id);
+                    self.player.set_pos(Point2::new(x, y));
                 }
                 Msg::OtherJoined(conn_id, nickname) => {
                     println!("Player connected. ID - {}, nickname - {}", conn_id, nickname);

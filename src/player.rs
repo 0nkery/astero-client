@@ -31,7 +31,7 @@ use util::{
 
 
 pub struct Player {
-    pos: Point2,
+    pos: Option<Point2>,
     facing: f32,
     velocity: Vector2,
     rvel: f32,
@@ -45,10 +45,10 @@ impl Player {
         let nickname_display = graphics::Text::new(ctx, nickname, font)?;
 
         Ok(Player {
-            pos: Point2::origin(),
-            facing: 0.,
+            pos: None,
+            facing: 0.0,
             velocity: nalgebra::zero(),
-            rvel: 0.,
+            rvel: 0.0,
             bbox_size: PLAYER_BBOX,
             life: PLAYER_LIFE,
             nickname_display,
@@ -56,6 +56,10 @@ impl Player {
     }
 
     pub fn handle_input(&mut self, input: &InputState, dt: f32) {
+        if self.pos.is_none() {
+            return;
+        }
+
         self.facing += dt * PLAYER_TURN_RATE * input.xaxis;
 
         if input.yaxis > 0.0 {
@@ -78,20 +82,24 @@ impl Player {
     }
 
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets, coords: (u32, u32)) -> GameResult<()> {
-        let (screen_w, screen_h) = coords;
-        let pos = world_to_screen_coords(screen_w, screen_h, self.pos);
-        let dest_point = graphics::Point::new(pos.x as f32, pos.y as f32);
-        let image = assets.player_image();
+        if let Some(ref pos) = self.pos {
+            let (screen_w, screen_h) = coords;
+            let pos = world_to_screen_coords(
+                screen_w, screen_h, *pos
+            );
+            let dest_point = graphics::Point::new(pos.x as f32, pos.y as f32);
+            let image = assets.player_image();
 
-        graphics::draw(ctx, image, dest_point, self.facing)?;
+            graphics::draw(ctx, image, dest_point, self.facing)?;
 
-        StickyHealthBar::draw(
-            ctx, pos.x, pos.y + SPRITE_HALF_SIZE + 6.0,
-            SPRITE_SIZE as f32, self.cur_life(), self.max_life()
-        )?;
+            StickyHealthBar::draw(
+                ctx, pos.x, pos.y + SPRITE_HALF_SIZE + 6.0,
+                SPRITE_SIZE as f32, self.cur_life(), self.max_life()
+            )?;
 
-        let nickname_dest = graphics::Point::new(pos.x, pos.y - SPRITE_HALF_SIZE - 7.0);
-        graphics::draw(ctx, &self.nickname_display, nickname_dest, 0.0)?;
+            let nickname_dest = graphics::Point::new(pos.x, pos.y - SPRITE_HALF_SIZE - 7.0);
+            graphics::draw(ctx, &self.nickname_display, nickname_dest, 0.0)?;
+        }
 
         Ok(())
     }
@@ -124,12 +132,12 @@ impl Movable for Player {
         self.velocity = velocity;
     }
 
-    fn pos(&self) -> Point2 {
+    fn pos(&self) -> Option<Point2> {
         self.pos
     }
 
     fn set_pos(&mut self, pos: Point2) {
-        self.pos = pos;
+        self.pos = Some(pos);
     }
 
     fn facing(&self) -> f32 {
