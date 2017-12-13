@@ -55,9 +55,18 @@ pub struct StickyHealthBar;
 const STICKY_HEIGHT: f32 = 3.0;
 
 impl StickyHealthBar {
-    pub fn draw(ctx: &mut Context, x: f32, y: f32, width: f32, cur: f32, max: f32) -> GameResult<()> {
+    pub fn draw(
+        ctx: &mut Context,
+        x: f32,
+        y: f32,
+        width: f32,
+        cur: f32,
+        max: f32,
+        color: Option<graphics::Color>
+    ) -> GameResult<()> {
+
         let old_color = graphics::get_color(ctx);
-        graphics::set_color(ctx, colors::RED)?;
+        graphics::set_color(ctx, color.or(Some(colors::RED)).unwrap())?;
 
         let width = width * (cur / max);
 
