@@ -38,8 +38,8 @@ impl Msg {
         let msg = match rdr.read_i16::<BigEndian>()? {
             0 => {
                 let id = rdr.read_u16::<BigEndian>()?;
-                let x = rdr.read_u16::<BigEndian>()? as f32;
-                let y = rdr.read_u16::<BigEndian>()? as f32;
+                let x = rdr.read_i16::<BigEndian>()? as f32;
+                let y = rdr.read_i16::<BigEndian>()? as f32;
 
                 Msg::JoinAck(id, x, y)
             },
@@ -55,8 +55,8 @@ impl Msg {
                     String::from_utf8_unchecked(nickname)
                 };
 
-                let x = rdr.read_u16::<BigEndian>()? as f32;
-                let y = rdr.read_u16::<BigEndian>()? as f32;
+                let x = rdr.read_i16::<BigEndian>()? as f32;
+                let y = rdr.read_i16::<BigEndian>()? as f32;
 
                 Msg::OtherJoined(conn_id, nickname, x, y)
             }
