@@ -37,20 +37,22 @@ pub struct Player {
     rvel: f32,
     bbox_size: f32,
     life: f32,
-    nickname: String,
+    nickname_display: graphics::Text,
 }
 
 impl Player {
-    pub fn new(nickname: String) -> Self {
-        Player {
+    pub fn new(ctx: &mut Context, nickname: &str, font: &graphics::Font) -> GameResult<Self> {
+        let nickname_display = graphics::Text::new(ctx, nickname, font)?;
+
+        Ok(Player {
             pos: Point2::origin(),
             facing: 0.,
             velocity: nalgebra::zero(),
             rvel: 0.,
             bbox_size: PLAYER_BBOX,
             life: PLAYER_LIFE,
-            nickname
-        }
+            nickname_display,
+        })
     }
 
     pub fn handle_input(&mut self, input: &InputState, dt: f32) {
@@ -87,6 +89,9 @@ impl Player {
             ctx, pos.x, pos.y + SPRITE_HALF_SIZE + 6.0,
             SPRITE_SIZE as f32, self.cur_life(), self.max_life()
         )?;
+
+        let nickname_dest = graphics::Point::new(pos.x, pos.y - SPRITE_HALF_SIZE - 7.0);
+        graphics::draw(ctx, &self.nickname_display, nickname_dest, 0.0)?;
 
         Ok(())
     }

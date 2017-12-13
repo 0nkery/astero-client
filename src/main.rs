@@ -220,6 +220,7 @@ pub struct Assets {
     shot_image: graphics::Image,
     rock_image: graphics::Image,
     font: graphics::Font,
+    small_font: graphics::Font,
 }
 
 impl Assets {
@@ -229,12 +230,14 @@ impl Assets {
         let rock_image = graphics::Image::new(ctx, "/rock.png")?;
 
         let font = graphics::Font::new(ctx, "/DejaVuSerif.ttf", 18)?;
+        let small_font = graphics::Font::new(ctx, "/DejaVuSerif.ttf", 12)?;
 
         Ok(Assets {
             player_image,
             shot_image,
             rock_image,
-            font
+            font,
+            small_font,
         })
     }
 
@@ -312,7 +315,7 @@ impl MainState {
                 .expect("Failed to convert username to Unicode")
                 .to_string();
 
-        let player = Player::new(nickname.clone());
+        let player = Player::new(ctx, &nickname, &assets.small_font)?;
 
         let client = client::Client::start();
         client.send(Msg::Join(nickname));
