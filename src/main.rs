@@ -27,7 +27,27 @@ mod client;
 use client::Msg;
 
 mod health_bar;
+
 mod constant;
+use constant::{
+    PLAYER_BBOX,
+    PLAYER_LIFE,
+    PLAYER_TURN_RATE,
+    PLAYER_ACCELERATION,
+    PLAYER_DECELERATION,
+    PLAYER_SHOT_TIME,
+    ROCK_BBOX,
+    ROCK_LIFE,
+    MAX_ROCK_VEL,
+    SHOT_RVEL,
+    SHOT_BBOX,
+    SHOT_LIFE,
+    SHOT_SPEED,
+    MAX_PHYSICS_VEL,
+    SPRITE_HALF_SIZE,
+    SPRITE_SIZE,
+};
+use constant::gui::HEALTH_BAR_SIZE;
 
 
 type Point2 = nalgebra::Point2<f32>;
@@ -61,32 +81,6 @@ struct Actor {
     bbox_size: f32,
     life: f32
 }
-
-const PLAYER_LIFE: f32 = 3.0;
-const SHOT_LIFE: f32 = 2.0;
-const ROCK_LIFE: f32 = 2.0;
-
-const PLAYER_BBOX: f32 = 12.0;
-const ROCK_BBOX: f32 = 12.0;
-const SHOT_BBOX: f32 = 6.0;
-
-const SHOT_SPEED: f32 = 200.0;
-const SHOT_RVEL: f32 = 0.1;
-
-const MAX_ROCK_VEL: f32 = 50.0;
-
-const SPRITE_SIZE: u32 = 32;
-const SPRITE_HALF_SIZE: f32 = (SPRITE_SIZE / 2) as f32;
-
-const PLAYER_ACCELERATION: f32 = 100.0;
-const PLAYER_DECELERATION: f32 = 10.0;
-const PLAYER_TURN_RATE: f32 = 2.05;
-const PLAYER_SHOT_TIME: f32 = 0.5;
-
-const MAX_PHYSICS_VEL: f32 = 250.0;
-
-const HEALTH_BAR_SIZE: f32 = 30.0;
-
 
 impl Actor {
     fn create_player() -> Self {

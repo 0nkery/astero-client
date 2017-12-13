@@ -5,9 +5,7 @@ use ggez::{
 };
 
 use constant::colors;
-
-
-const LINE_WIDTH: f32 = 4.0;
+use constant::gui::STATIC_HEALTH_BAR_LINE_WIDTH;
 
 
 pub struct StaticHealthBar {
@@ -27,7 +25,7 @@ impl StaticHealthBar {
         let old_line_width = graphics::get_line_width(ctx);
 
         graphics::set_color(ctx, colors::LIGHT_BLUE)?;
-        graphics::set_line_width(ctx, LINE_WIDTH);
+        graphics::set_line_width(ctx, STATIC_HEALTH_BAR_LINE_WIDTH);
 
         graphics::rectangle(
             ctx, graphics::DrawMode::Line,
@@ -36,8 +34,8 @@ impl StaticHealthBar {
 
         graphics::set_color(ctx, colors::RED)?;
 
-        let health_bar_width = (self.width - LINE_WIDTH) * (cur / max);
-        let health_bar_height = self.height - LINE_WIDTH;
+        let health_bar_width = (self.width - STATIC_HEALTH_BAR_LINE_WIDTH) * (cur / max);
+        let health_bar_height = self.height - STATIC_HEALTH_BAR_LINE_WIDTH;
 
         graphics::rectangle(
             ctx, graphics::DrawMode::Fill,
