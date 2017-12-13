@@ -29,11 +29,6 @@ use client::Msg;
 
 mod constant;
 use constant::{
-    PLAYER_BBOX,
-    PLAYER_LIFE,
-    PLAYER_TURN_RATE,
-    PLAYER_ACCELERATION,
-    PLAYER_DECELERATION,
     PLAYER_SHOT_TIME,
     ROCK_BBOX,
     ROCK_LIFE,
@@ -49,20 +44,83 @@ use constant::{
 use constant::gui::HEALTH_BAR_SIZE;
 
 mod health_bar;
+
 mod player;
+use player::Player;
+
 
 mod util;
 use util::{
     Point2,
     Vector2,
     vec_from_angle,
-    random_vec
+    random_vec,
+    world_to_screen_coords
 };
+
+
+trait Movable {
+    #[inline]
+    fn velocity(&self) -> Vector2;
+    #[inline]
+    fn set_velocity(&mut self, velocity: Vector2);
+
+    #[inline]
+    fn pos(&self) -> Point2;
+    #[inline]
+    fn set_pos(&mut self, pos: Point2);
+
+    #[inline]
+    fn facing(&self) -> f32;
+    #[inline]
+    fn set_facing(&mut self, facing: f32);
+
+    #[inline]
+    fn rvel(&self) -> f32;
+    #[inline]
+    fn set_rvel(&mut self, rvel: f32);
+
+    fn update_position(&mut self, dt: f32) {
+        let mut velocity = self.velocity();
+        let norm_sq = velocity.norm_squared();
+        if norm_sq > MAX_PHYSICS_VEL.powi(2) {
+            velocity = velocity / norm_sq.sqrt() * MAX_PHYSICS_VEL;
+        }
+        self.set_velocity(velocity);
+
+        let dv = velocity * dt;
+        let pos = self.pos() + dv;
+        self.set_pos(pos);
+
+        let facing = self.facing() + self.rvel();
+        self.set_facing(facing);
+    }
+
+    fn wrap_position(&mut self, sx: f32, sy: f32) {
+        let screen_x_bounds = sx / 2.0;
+        let screen_y_bounds = sy / 2.0;
+        let mut pos = self.pos();
+
+        let center = pos - Vector2::new(-SPRITE_HALF_SIZE, SPRITE_HALF_SIZE);
+
+        if center.x > screen_x_bounds {
+            pos.x -= sx;
+        } else if center.x < -screen_x_bounds {
+            pos.x += sx;
+        }
+        if center.y > screen_y_bounds {
+            pos.y -= sy;
+        } else if center.y < -screen_y_bounds {
+            pos.y += sy;
+        }
+
+        self.set_pos(pos);
+    }
+}
 
 
 #[derive(Debug)]
 enum ActorType {
-    Player,
     Rock,
     Shot
 }
@@ -79,18 +137,6 @@ struct Actor {
 }
 
 impl Actor {
-    fn create_player() -> Self {
-        Actor {
-            tag: ActorType::Player,
-            pos: Point2::origin(),
-            facing: 0.,
-            velocity: nalgebra::zero(),
-            rvel: 0.,
-            bbox_size: PLAYER_BBOX,
-            life: PLAYER_LIFE
-        }
-    }
-
     fn create_rock() -> Self {
         Actor {
             tag: ActorType::Rock,
@@ -129,73 +175,47 @@ impl Actor {
         }
     }
 
-    fn handle_input(&mut self, input: &InputState, dt: f32) {
-        match self.tag {
-            ActorType::Player => {
-                self.facing += dt * PLAYER_TURN_RATE * input.xaxis;
-
-                if input.yaxis > 0.0 {
-                    self.player_accelerate(dt);
-                } else if input.yaxis < 0.0 {
-                    self.player_decelerate(dt);
-                }
-            },
-            _ => {}
-        }
-    }
-
-    fn player_accelerate(&mut self, dt: f32) {
-        let direction_vector = vec_from_angle(self.facing);
-        let acceleration = direction_vector * PLAYER_ACCELERATION;
-        self.velocity += acceleration * dt;
-    }
-
-    fn player_decelerate(&mut self, dt: f32) {
-        let direction_vector = vec_from_angle(self.facing + std::f32::consts::PI);
-        let deceleration_vector = direction_vector * PLAYER_DECELERATION;
-        self.velocity += deceleration_vector * dt;
-    }
-
-    fn update_position(&mut self, dt: f32) {
-        let norm_sq = self.velocity.norm_squared();
-        if norm_sq > MAX_PHYSICS_VEL.powi(2) {
-            self.velocity = self.velocity / norm_sq.sqrt() * MAX_PHYSICS_VEL;
-        }
-        let dv = self.velocity * dt;
-        self.pos += dv;
-        self.facing += self.rvel;
-    }
-
-    fn wrap_position(&mut self, sx: f32, sy: f32) {
-        let screen_x_bounds = sx / 2.0;
-        let screen_y_bounds = sy / 2.0;
-        let center = self.pos - Vector2::new(-SPRITE_HALF_SIZE, SPRITE_HALF_SIZE);
-        if center.x > screen_x_bounds {
-            self.pos.x -= sx;
-        } else if center.x < -screen_x_bounds {
-            self.pos.x += sx;
-        }
-        if center.y > screen_y_bounds {
-            self.pos.y -= sy;
-        } else if center.y < -screen_y_bounds {
-            self.pos.y += sy;
-        }
-    }
-
     fn handle_timed_life(&mut self, dt: f32) {
         self.life -= dt;
     }
 }
 
-fn world_to_screen_coords(screen_width: u32, screen_height: u32, point: Point2) -> Point2 {
-    let width = screen_width as f32;
-    let height = screen_height as f32;
-    let x = point.x + width / 2.0;
-    let y = height - (point.y + height / 2.0);
-    Point2::new(x, y)
+impl Movable for Actor {
+    fn velocity(&self) -> Vector2 {
+        self.velocity
+    }
+
+    fn set_velocity(&mut self, velocity: Vector2) {
+        self.velocity = velocity;
+    }
+
+    fn pos(&self) -> Point2 {
+        self.pos
+    }
+
+    fn set_pos(&mut self, pos: Point2) {
+        self.pos = pos;
+    }
+
+    fn facing(&self) -> f32 {
+        self.facing
+    }
+
+    fn set_facing(&mut self, facing: f32) {
+        self.facing = facing;
+    }
+
+    fn rvel(&self) -> f32 {
+        self.rvel
+    }
+
+    fn set_rvel(&mut self, rvel: f32) {
+        self.rvel = rvel;
+    }
 }
 
-struct Assets {
+
+pub struct Assets {
     player_image: graphics::Image,
     shot_image: graphics::Image,
     rock_image: graphics::Image,
@@ -220,15 +240,18 @@ impl Assets {
 
     fn actor_image(&mut self, actor: &Actor) -> &mut graphics::Image {
         match actor.tag {
-            ActorType::Player => &mut self.player_image,
             ActorType::Rock => &mut self.rock_image,
             ActorType::Shot => &mut self.shot_image,
         }
     }
+
+    fn player_image(&mut self) -> &mut graphics::Image {
+        &mut self.player_image
+    }
 }
 
 #[derive(Debug)]
-struct InputState {
+pub struct InputState {
     xaxis: f32,
     yaxis: f32,
     fire: bool,
@@ -245,7 +268,7 @@ impl Default for InputState {
 }
 
 struct MainState {
-    player: Actor,
+    player: Player,
     shots: Vec<Actor>,
     rocks: Vec<Actor>,
     level: usize,
@@ -277,11 +300,10 @@ impl MainState {
         let score_display = graphics::Text::new(ctx, "score", &assets.font)?;
         let level_display = graphics::Text::new(ctx, "level", &assets.font)?;
 
-        let player = Actor::create_player();
-        let rocks = Actor::create_rocks(5, player.pos, 100.0, 250.0);
+        let rocks = Actor::create_rocks(5, Point2::origin(), 100.0, 250.0);
 
         let home_dir = env::home_dir().expect("Failed to retrieve home dir");
-        let username =
+        let nickname =
             home_dir
                 .as_path()
                 .file_name()
@@ -290,8 +312,10 @@ impl MainState {
                 .expect("Failed to convert username to Unicode")
                 .to_string();
 
+        let player = Player::new(nickname.clone());
+
         let client = client::Client::start();
-        client.send(Msg::Join(username));
+        client.send(Msg::Join(nickname));
 
         let screen_width = ctx.conf.window_width;
         let screen_height = ctx.conf.window_height;
@@ -331,13 +355,11 @@ impl MainState {
 
     fn fire_player_shot(&mut self) {
         self.player_shot_timeout = PLAYER_SHOT_TIME;
-
         let mut shot = Actor::create_shot();
-        shot.pos = self.player.pos;
-        shot.facing = self.player.facing;
+        shot.pos = self.player.pos();
+        shot.facing = self.player.facing();
         let direction = vec_from_angle(shot.facing);
         shot.velocity = direction * SHOT_SPEED;
-
         self.shots.push(shot);
     }
 
@@ -348,9 +370,9 @@ impl MainState {
 
     fn handle_collisions(&mut self) {
         for rock in &mut self.rocks {
-            let distance = rock.pos - self.player.pos;
-            if distance.norm() < (self.player.bbox_size + rock.bbox_size) {
-                self.player.life -= 1.0;
+            let distance = rock.pos - self.player.pos();
+            if distance.norm() < (self.player.bbox_size() + rock.bbox_size) {
+                self.player.damage(1.0);
                 rock.life = 0.0;
                 continue;
             }
@@ -372,7 +394,7 @@ impl MainState {
         if self.rocks.is_empty() {
             self.level += 1;
             self.gui_dirty = true;
-            let r = Actor::create_rocks(self.level + 5, self.player.pos, 100.0, 250.0);
+            let r = Actor::create_rocks(self.level + 5, self.player.pos(), 100.0, 250.0);
             self.rocks.extend(r);
         }
     }
@@ -479,7 +501,7 @@ impl EventHandler for MainState {
             self.gui_dirty = false;
         }
 
-        if self.player.life <= 0.0 {
+        if self.player.cur_life() <= 0.0 {
             println!("Game over!");
             ctx.quit()?;
         }
@@ -493,7 +515,7 @@ impl EventHandler for MainState {
         {
             let coords = (self.screen_width, self.screen_height);
 
-            draw_actor(&mut self.assets, ctx, &self.player, coords)?;
+            self.player.draw(ctx, &mut self.assets, coords)?;
 
             for shot in &self.shots {
                 draw_actor(&mut self.assets, ctx, shot, coords)?;
@@ -516,7 +538,7 @@ impl EventHandler for MainState {
          graphics::draw(ctx, &self.level_display, level_dest, 0.0)?;
          graphics::draw(ctx, &self.score_display, score_dest, 0.0)?;
 
-         self.health_bar.draw(ctx, self.player.life, PLAYER_LIFE)?;
+         self.health_bar.draw(ctx, self.player.cur_life(), self.player.max_life())?;
 
          graphics::present(ctx);
 
