@@ -14,6 +14,13 @@ pub mod colors {
         b: 210.0 / 255.0,
         a: 127.0 / 255.0
     };
+
+    pub const GREEN: Color = Color {
+        r: 162.0 / 255.0,
+        g: 215.0 / 255.0,
+        b: 41.0 / 255.0,
+        a: 200.0 / 255.0,
+    };
 }
 
 pub const PLAYER_LIFE: f32 = 3.0;
