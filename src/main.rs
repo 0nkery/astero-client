@@ -323,7 +323,7 @@ impl MainState {
                 .expect("Failed to convert username to Unicode")
                 .to_string();
 
-        let player = Player::new(ctx, &nickname, &assets.small_font)?;
+        let player = Player::new(ctx, &nickname, &assets.small_font, constant::colors::GREEN)?;
 
         let client = client::Client::start();
         client.send(Msg::Join(nickname));
@@ -453,7 +453,11 @@ fn draw_actor(
         let x = pos.x;
         let y = pos.y + SPRITE_HALF_SIZE + 4.0;
 
-        health_bar::StickyHealthBar::draw(ctx, x, y, SPRITE_SIZE as f32, actor.life, ROCK_LIFE)?;
+        health_bar::StickyHealthBar::draw(
+            ctx, x, y,
+            SPRITE_SIZE as f32, actor.life, ROCK_LIFE,
+            None
+        )?;
     }
 
     Ok(())

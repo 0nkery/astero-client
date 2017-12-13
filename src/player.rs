@@ -38,10 +38,17 @@ pub struct Player {
     bbox_size: f32,
     life: f32,
     nickname_display: graphics::Text,
+    color: graphics::Color,
 }
 
 impl Player {
-    pub fn new(ctx: &mut Context, nickname: &str, font: &graphics::Font) -> GameResult<Self> {
+    pub fn new(
+        ctx: &mut Context,
+        nickname: &str,
+        font: &graphics::Font,
+        color: graphics::Color
+    ) -> GameResult<Self> {
+
         let nickname_display = graphics::Text::new(ctx, nickname, font)?;
 
         Ok(Player {
@@ -52,6 +59,7 @@ impl Player {
             bbox_size: PLAYER_BBOX,
             life: PLAYER_LIFE,
             nickname_display,
+            color,
         })
     }
 
@@ -94,11 +102,17 @@ impl Player {
 
             StickyHealthBar::draw(
                 ctx, pos.x, pos.y + SPRITE_HALF_SIZE + 6.0,
-                SPRITE_SIZE as f32, self.cur_life(), self.max_life()
+                SPRITE_SIZE as f32, self.cur_life(), self.max_life(),
+                Some(self.color)
             )?;
+
+            let old_color = graphics::get_color(ctx);
+            graphics::set_color(ctx, self.color)?;
 
             let nickname_dest = graphics::Point::new(pos.x, pos.y - SPRITE_HALF_SIZE - 7.0);
             graphics::draw(ctx, &self.nickname_display, nickname_dest, 0.0)?;
+
+            graphics::set_color(ctx, old_color)?;
         }
 
         Ok(())
