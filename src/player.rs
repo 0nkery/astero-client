@@ -37,6 +37,7 @@ pub struct Player {
     rvel: f32,
     bbox_size: f32,
     life: f32,
+    nickname: String,
     nickname_display: graphics::Text,
     color: graphics::Color,
 }
@@ -44,12 +45,12 @@ pub struct Player {
 impl Player {
     pub fn new(
         ctx: &mut Context,
-        nickname: &str,
+        nickname: String,
         font: &graphics::Font,
         color: graphics::Color
     ) -> GameResult<Self> {
 
-        let nickname_display = graphics::Text::new(ctx, nickname, font)?;
+        let nickname_display = graphics::Text::new(ctx, &nickname, font)?;
 
         Ok(Player {
             pos: None,
@@ -58,6 +59,7 @@ impl Player {
             rvel: 0.0,
             bbox_size: PLAYER_BBOX,
             life: PLAYER_LIFE,
+            nickname,
             nickname_display,
             color,
         })
@@ -134,6 +136,10 @@ impl Player {
 
     pub fn damage(&mut self, dmg: f32) {
         self.life -= dmg;
+    }
+
+    pub fn nickname(&self) -> &str {
+        &self.nickname
     }
 }
 

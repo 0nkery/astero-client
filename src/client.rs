@@ -26,7 +26,7 @@ pub enum Msg {
 
     // server messages
     JoinAck(u16, f32, f32),
-    OtherJoined(u16, String),
+    OtherJoined(u16, String, f32, f32),
     OtherLeft(u16),
     ServerHeartbeat,
 }
@@ -55,7 +55,10 @@ impl Msg {
                     String::from_utf8_unchecked(nickname)
                 };
 
-                Msg::OtherJoined(conn_id, nickname)
+                let x = rdr.read_u16::<BigEndian>()? as f32;
+                let y = rdr.read_u16::<BigEndian>()? as f32;
+
+                Msg::OtherJoined(conn_id, nickname, x, y)
             }
 
             2 => {

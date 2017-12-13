@@ -284,7 +284,7 @@ struct MainState {
     rocks: Vec<Actor>,
     level: usize,
     score: i32,
-    others: HashMap<u16, String>,
+    others: HashMap<u16, Player>,
 
     assets: Assets,
     screen_width: u32,
@@ -323,7 +323,7 @@ impl MainState {
                 .expect("Failed to convert username to Unicode")
                 .to_string();
 
-        let player = Player::new(ctx, &nickname, &assets.small_font, constant::colors::GREEN)?;
+        let player = Player::new(ctx, nickname.clone(), &assets.small_font, constant::colors::GREEN)?;
 
         let client = client::Client::start();
         client.send(Msg::Join(nickname));
@@ -477,13 +477,19 @@ impl EventHandler for MainState {
                     println!("Connected to server. Conn ID - {}", conn_id);
                     self.player.set_pos(Point2::new(x, y));
                 }
-                Msg::OtherJoined(conn_id, nickname) => {
-                    println!("Player connected. ID - {}, nickname - {}", conn_id, nickname);
-                    self.others.insert(conn_id, nickname);
+                Msg::OtherJoined(conn_id, nickname, x, y) => {
+                    println!("Player connected. ID - {}, nickname - {}, coord - ({}, {})", conn_id, nickname, x, y);
+                    let mut other = Player::new(
+                        ctx, nickname, &self.assets.small_font, constant::colors::RED
+                    )?;
+                    other.set_pos(Point2::new(x, y));
+                    self.others.insert(conn_id, other);
                 }
                 Msg::OtherLeft(conn_id) => {
-                    let nickname = self.others.remove(&conn_id).unwrap();
-                    println!("Player disconnected. ID - {}, nickname - {}", conn_id, nickname);
+                    let other = self.others.remove(&conn_id);
+                    if let Some(other) = other {
+                        println!("Player disconnected. ID - {}, nickname - {}", conn_id, other.nickname());
+                    }
                 }
                 Msg::ServerNotResponding => {
                     println!("Server is not available! Closing game...");
@@ -547,6 +553,10 @@ impl EventHandler for MainState {
 
             for rock in &self.rocks {
                 draw_actor(&mut self.assets, ctx, rock, coords)?;
+            }
+
+            for other in self.others.values() {
+                other.draw(ctx, &mut self.assets, coords)?;
             }
         }
 
