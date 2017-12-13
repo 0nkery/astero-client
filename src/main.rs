@@ -26,6 +26,9 @@ use ggez::timer;
 mod client;
 use client::Msg;
 
+mod health_bar;
+mod constant;
+
 
 type Point2 = nalgebra::Point2<f32>;
 type Vector2 = nalgebra::Vector2<f32>;
@@ -82,12 +85,7 @@ const PLAYER_SHOT_TIME: f32 = 0.5;
 
 const MAX_PHYSICS_VEL: f32 = 250.0;
 
-const RED: graphics::Color = graphics::Color {
-    r: 253.0 / 255.0,
-    g: 112.0 / 255.0,
-    b: 119.0 / 255.0,
-    a: 200.0 / 255.0,
-};
+const HEALTH_BAR_SIZE: f32 = 30.0;
 
 
 impl Actor {
@@ -274,6 +272,7 @@ struct MainState {
     gui_dirty: bool,
     score_display: graphics::Text,
     level_display: graphics::Text,
+    health_bar: health_bar::StaticHealthBar,
 
     client: client::Client,
 }
@@ -304,6 +303,16 @@ impl MainState {
         let client = client::Client::start();
         client.send(Msg::Join(username));
 
+        let screen_width = ctx.conf.window_width;
+        let screen_height = ctx.conf.window_height;
+
+        let health_bar = health_bar::StaticHealthBar::new(
+            (screen_width / 4 + 10) as f32,
+            (screen_height - 30) as f32,
+            (screen_width / 2) as f32,
+            HEALTH_BAR_SIZE
+        );
+
         let s = MainState {
             player,
             shots: Vec::new(),
@@ -313,8 +322,8 @@ impl MainState {
             others: HashMap::new(),
 
             assets,
-            screen_width: ctx.conf.window_width,
-            screen_height: ctx.conf.window_height,
+            screen_width,
+            screen_height,
 
             input: InputState::default(),
             player_shot_timeout: 0.0,
@@ -322,6 +331,7 @@ impl MainState {
             gui_dirty: true,
             score_display,
             level_display,
+            health_bar,
 
             client
         };
@@ -409,17 +419,10 @@ fn draw_actor(
     graphics::draw(ctx, image, dest_point, actor.facing as f32)?;
 
     if let ActorType::Rock = actor.tag {
-        let old_color = graphics::get_color(ctx);
-        graphics::set_color(ctx, RED)?;
+        let x = pos.x;
+        let y = pos.y + SPRITE_HALF_SIZE + 4.0;
 
-        let health_bar_width = SPRITE_SIZE as f32 * (actor.life / ROCK_LIFE);
-
-        graphics::rectangle(ctx, graphics::DrawMode::Fill, graphics::Rect::new(
-            pos.x, pos.y + SPRITE_HALF_SIZE + 4.0,
-            health_bar_width, 3.0
-        ))?;
-
-        graphics::set_color(ctx, old_color)?;
+        health_bar::StickyHealthBar::draw(ctx, x, y, SPRITE_SIZE as f32, actor.life, ROCK_LIFE)?;
     }
 
     Ok(())
@@ -523,30 +526,7 @@ impl EventHandler for MainState {
          graphics::draw(ctx, &self.level_display, level_dest, 0.0)?;
          graphics::draw(ctx, &self.score_display, score_dest, 0.0)?;
 
-         let old_color = graphics::get_color(ctx);
-         let old_line_width = graphics::get_line_width(ctx);
-
-         graphics::set_color(ctx, (126, 203, 210, 127).into())?;
-         graphics::set_line_width(ctx, 4.0);
-
-         let rect_x = (self.screen_width / 4 + 10) as f32;
-         let rect_y = (self.screen_height - 30) as f32;
-         let rect_width = (self.screen_width / 2) as f32;
-         let rect_height = 30.0;
-
-         graphics::rectangle(ctx, graphics::DrawMode::Line, graphics::Rect::new(rect_x, rect_y, rect_width, rect_height))?;
-
-         graphics::set_color(ctx, RED)?;
-
-         let health_bar_width = (rect_width - 4.0) * (self.player.life / PLAYER_LIFE);
-
-         graphics::rectangle(ctx, graphics::DrawMode::Fill, graphics::Rect::new(
-             rect_x, rect_y,
-             health_bar_width, rect_height - 4.0
-         ))?;
-
-         graphics::set_color(ctx, old_color)?;
-         graphics::set_line_width(ctx, old_line_width);
+         self.health_bar.draw(ctx, self.player.life, PLAYER_LIFE)?;
 
          graphics::present(ctx);
 
