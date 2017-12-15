@@ -135,15 +135,20 @@ impl Msg {
 
 pub struct CompositionIter {
     rdr: Cursor<SmallVec<[u8; 512]>>,
-    len: u64,
+    count: u16,
+    cur: u16,
 }
 
 impl CompositionIter {
     pub fn new(buf: SmallVec<[u8; 512]>) -> Self {
-        let len = buf.len() as u64;
+        let mut rdr = Cursor::new(buf);
+        rdr.read_u16::<BigEndian>().expect("Failed to read bytes from composition");
+        let count = rdr.read_u16::<BigEndian>().expect("Failed to read bytes from composition");
+
         CompositionIter {
-            rdr: Cursor::new(buf),
-            len
+            rdr,
+            count,
+            cur: 0,
         }
     }
 }
@@ -152,7 +157,7 @@ impl Iterator for CompositionIter {
     type Item = Msg;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.rdr.position() < self.len {
+        if self.cur < self.count {
             let msg_size = self.rdr.read_u16::<BigEndian>().expect("Failed to read bytes from composition");
 
             let slice_start = self.rdr.position() as usize;
