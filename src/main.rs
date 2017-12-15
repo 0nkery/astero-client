@@ -48,6 +48,8 @@ mod health_bar;
 mod player;
 use player::Player;
 
+mod proto;
+
 
 mod util;
 use util::{
