@@ -11,6 +11,7 @@ futures = "0.1"
 tokio-core = "0.1"
 byteorder = "1.2"
 smallvec = "0.6"
+quick-protobuf = "0.6"
 
 [dependencies.clippy]
 version = "*"
