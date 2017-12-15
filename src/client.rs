@@ -12,6 +12,8 @@ use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::{Core, Timeout};
 
+use super::Actor;
+
 
 #[derive(Debug)]
 pub enum Msg {
@@ -29,6 +31,7 @@ pub enum Msg {
     OtherJoined(u16, String, f32, f32),
     OtherLeft(u16),
     ServerHeartbeat,
+    Spawn(u16, Actor),
 }
 
 impl Msg {
@@ -68,6 +71,22 @@ impl Msg {
             }
 
             3 => Msg::ServerHeartbeat,
+
+            4 => {
+                let id = rdr.read_u16::<BigEndian>()?;
+
+                let mut asteroid = Actor::create_asteroid();
+
+                asteroid.pos.x = rdr.read_f32::<BigEndian>()?;
+                asteroid.pos.y = rdr.read_f32::<BigEndian>()?;
+                asteroid.velocity.x = rdr.read_f32::<BigEndian>()?;
+                asteroid.velocity.y = rdr.read_f32::<BigEndian>()?;
+                asteroid.facing = rdr.read_f32::<BigEndian>()?;
+                asteroid.rvel = rdr.read_f32::<BigEndian>()?;
+                asteroid.life = rdr.read_f32::<BigEndian>()?;
+
+                Msg::Spawn(id, asteroid)
+            }
 
             _ => Msg::Unknown
         };

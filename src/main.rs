@@ -129,12 +129,12 @@ trait Movable {
 
 #[derive(Debug)]
 enum ActorType {
-    Rock,
+    Asteroid,
     Shot
 }
 
 #[derive(Debug)]
-struct Actor {
+pub struct Actor {
     tag: ActorType,
     pos: Point2,
     facing: f32,
@@ -145,13 +145,13 @@ struct Actor {
 }
 
 impl Actor {
-    fn create_rock() -> Self {
+    fn create_asteroid() -> Self {
         Actor {
-            tag: ActorType::Rock,
+            tag: ActorType::Asteroid,
             pos: Point2::origin(),
-            facing: 0.,
+            facing: 0.0,
             velocity: nalgebra::zero(),
-            rvel: 0.,
+            rvel: 0.0,
             bbox_size: ROCK_BBOX,
             life: ROCK_LIFE
         }
@@ -161,7 +161,7 @@ impl Actor {
         assert!(max_radius > min_radius);
         let mut rocks = Vec::with_capacity(num);
         for _ in 0..num {
-            let mut rock = Self::create_rock();
+            let mut rock = Self::create_asteroid();
             let r_angle = rand::random::<f32>() * 2.0 * std::f32::consts::PI;
             let r_distance = rand::random::<f32>() * (max_radius - min_radius) + min_radius;
             rock.pos = exclusion + vec_from_angle(r_angle) * r_distance;
@@ -251,7 +251,7 @@ impl Assets {
 
     fn actor_image(&mut self, actor: &Actor) -> &mut graphics::Image {
         match actor.tag {
-            ActorType::Rock => &mut self.rock_image,
+            ActorType::Asteroid => &mut self.rock_image,
             ActorType::Shot => &mut self.shot_image,
         }
     }
@@ -449,7 +449,7 @@ fn draw_actor(
     let image = assets.actor_image(actor);
     graphics::draw(ctx, image, dest_point, actor.facing as f32)?;
 
-    if let ActorType::Rock = actor.tag {
+    if let ActorType::Asteroid = actor.tag {
         let x = pos.x;
         let y = pos.y + SPRITE_HALF_SIZE + 4.0;
 
