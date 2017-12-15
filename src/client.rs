@@ -11,6 +11,7 @@ use futures::{Stream, Sink, Future, stream};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::{Core, Timeout};
+use smallvec::SmallVec;
 
 use super::Actor;
 
@@ -32,6 +33,7 @@ pub enum Msg {
     OtherLeft(u16),
     ServerHeartbeat,
     Spawn(u16, Actor),
+    Composition(SmallVec<[u8; 512]>),
 }
 
 impl Msg {
@@ -88,6 +90,12 @@ impl Msg {
                 Msg::Spawn(id, asteroid)
             }
 
+            5 => {
+                let vec = SmallVec::from_slice(buf);
+
+                Msg::Composition(vec)
+            }
+
             _ => Msg::Unknown
         };
 
@@ -115,8 +123,57 @@ impl Msg {
 
         Ok(())
     }
+
+    pub fn into_iter(self) -> Result<CompositionIter, Self> {
+        match self {
+            Msg::Composition(buf) => Ok(CompositionIter::new(buf)),
+            other => Err(other)
+        }
+    }
 }
 
+
+pub struct CompositionIter {
+    rdr: Cursor<SmallVec<[u8; 512]>>,
+    len: u64,
+}
+
+impl CompositionIter {
+    pub fn new(buf: SmallVec<[u8; 512]>) -> Self {
+        let len = buf.len() as u64;
+        CompositionIter {
+            rdr: Cursor::new(buf),
+            len
+        }
+    }
+}
+
+impl Iterator for CompositionIter {
+    type Item = Msg;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.rdr.position() < self.len {
+            let msg_size = self.rdr.read_u16::<BigEndian>().expect("Failed to read bytes from composition");
+
+            let slice_start = self.rdr.position() as usize;
+            let slice_end = slice_start + (msg_size as usize);
+
+            let msg = {
+                let buf = self.rdr.get_ref();
+
+                Msg::from_bytes(&buf[slice_start .. slice_end])
+                    .expect("Failed to read next message from composition")
+            };
+
+
+            self.rdr.set_position(slice_end as u64);
+
+            return Some(msg);
+        }
+
+        None
+    }
+}
 
 struct ClientCodec {
     server: SocketAddr
