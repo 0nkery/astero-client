@@ -1,0 +1,3 @@
+[submodule "proto"]
+	path = proto
+	url = git@gitlab.com:astero-game/proto.git
