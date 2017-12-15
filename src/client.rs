@@ -79,13 +79,13 @@ impl Msg {
 
                 let mut asteroid = Actor::create_asteroid();
 
-                asteroid.pos.x = rdr.read_f32::<BigEndian>()?;
-                asteroid.pos.y = rdr.read_f32::<BigEndian>()?;
-                asteroid.velocity.x = rdr.read_f32::<BigEndian>()?;
-                asteroid.velocity.y = rdr.read_f32::<BigEndian>()?;
-                asteroid.facing = rdr.read_f32::<BigEndian>()?;
-                asteroid.rvel = rdr.read_f32::<BigEndian>()?;
-                asteroid.life = rdr.read_f32::<BigEndian>()?;
+                asteroid.pos.x = rdr.read_f64::<BigEndian>()? as f32;
+                asteroid.pos.y = rdr.read_f64::<BigEndian>()? as f32;
+                asteroid.velocity.x = rdr.read_f64::<BigEndian>()? as f32;
+                asteroid.velocity.y = rdr.read_f64::<BigEndian>()? as f32;
+                asteroid.facing = rdr.read_f64::<BigEndian>()? as f32;
+                asteroid.rvel = rdr.read_f64::<BigEndian>()? as f32;
+                asteroid.life = rdr.read_f64::<BigEndian>()? as f32;
 
                 Msg::Spawn(id, asteroid)
             }
