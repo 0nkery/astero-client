@@ -10,6 +10,7 @@ extern crate nalgebra;
 extern crate byteorder;
 extern crate futures;
 extern crate tokio_core;
+extern crate smallvec;
 
 use std::collections::HashMap;
 use std::env;
@@ -32,7 +33,6 @@ use constant::{
     PLAYER_SHOT_TIME,
     ROCK_BBOX,
     ROCK_LIFE,
-    MAX_ROCK_VEL,
     SHOT_RVEL,
     SHOT_BBOX,
     SHOT_LIFE,
@@ -54,7 +54,6 @@ use util::{
     Point2,
     Vector2,
     vec_from_angle,
-    random_vec,
     world_to_screen_coords
 };
 
@@ -155,20 +154,6 @@ impl Actor {
             bbox_size: ROCK_BBOX,
             life: ROCK_LIFE
         }
-    }
-
-    fn create_rocks(num: usize, exclusion: Point2, min_radius: f32, max_radius: f32) -> Vec<Actor> {
-        assert!(max_radius > min_radius);
-        let mut rocks = Vec::with_capacity(num);
-        for _ in 0..num {
-            let mut rock = Self::create_asteroid();
-            let r_angle = rand::random::<f32>() * 2.0 * std::f32::consts::PI;
-            let r_distance = rand::random::<f32>() * (max_radius - min_radius) + min_radius;
-            rock.pos = exclusion + vec_from_angle(r_angle) * r_distance;
-            rock.velocity = random_vec(MAX_ROCK_VEL);
-            rocks.push(rock);
-        }
-        rocks
     }
 
     fn create_shot() -> Self {
@@ -281,8 +266,7 @@ impl Default for InputState {
 struct MainState {
     player: Player,
     shots: Vec<Actor>,
-    rocks: Vec<Actor>,
-    level: usize,
+    rocks: HashMap<u16, Actor>,
     score: i32,
     others: HashMap<u16, Player>,
 
@@ -295,7 +279,6 @@ struct MainState {
 
     gui_dirty: bool,
     score_display: graphics::Text,
-    level_display: graphics::Text,
     health_bar: health_bar::StaticHealthBar,
 
     client: client::Client,
@@ -309,9 +292,6 @@ impl MainState {
 
         let assets = Assets::new(ctx)?;
         let score_display = graphics::Text::new(ctx, "score", &assets.font)?;
-        let level_display = graphics::Text::new(ctx, "level", &assets.font)?;
-
-        let rocks = Actor::create_rocks(5, Point2::origin(), 100.0, 250.0);
 
         let home_dir = env::home_dir().expect("Failed to retrieve home dir");
         let nickname =
@@ -341,8 +321,7 @@ impl MainState {
         let s = MainState {
             player,
             shots: Vec::new(),
-            rocks,
-            level: 0,
+            rocks: HashMap::new(),
             score: 0,
             others: HashMap::new(),
 
@@ -355,7 +334,6 @@ impl MainState {
 
             gui_dirty: true,
             score_display,
-            level_display,
             health_bar,
 
             client
@@ -380,11 +358,11 @@ impl MainState {
 
     fn clear_dead_stuff(&mut self) {
         self.shots.retain(|s| s.life > 0.0);
-        self.rocks.retain(|r| r.life > 0.0);
+        self.rocks.retain(|_, ref r| r.life > 0.0);
     }
 
     fn handle_collisions(&mut self) {
-        for rock in &mut self.rocks {
+        for (_, rock) in &mut self.rocks {
 
             if let Some(ref pos) = self.player.pos() {
                 let distance = rock.pos - pos;
@@ -409,20 +387,55 @@ impl MainState {
         }
     }
 
-    fn check_for_level_respawn(&mut self) {
-        if self.rocks.is_empty() {
-            self.level += 1;
-            self.gui_dirty = true;
-            let r = Actor::create_rocks(self.level + 5, self.player.pos().unwrap(), 100.0, 250.0);
-            self.rocks.extend(r);
-        }
-    }
-
     fn update_ui(&mut self, ctx: &mut Context) -> GameResult<()> {
         let score_str = format!("Score: {}", self.score);
-        let level_str = format!("Level: {}", self.level);
         self.score_display = graphics::Text::new(ctx, &score_str, &self.assets.font)?;
-        self.level_display = graphics::Text::new(ctx, &level_str, &self.assets.font)?;
+
+        Ok(())
+    }
+
+    fn handle_message(&mut self, ctx: &mut Context, msg: Msg) -> GameResult<()> {
+        match msg {
+            Msg::JoinAck(conn_id, x, y) => {
+                println!("Connected to server. Conn ID - {}", conn_id);
+                self.player.set_pos(Point2::new(x, y));
+            }
+            Msg::OtherJoined(conn_id, nickname, x, y) => {
+                println!("Player connected. ID - {}, nickname - {}, coord - ({}, {})", conn_id, nickname, x, y);
+                let mut other = Player::new(
+                    ctx, nickname, &self.assets.small_font, constant::colors::RED
+                )?;
+                other.set_pos(Point2::new(x, y));
+                self.others.insert(conn_id, other);
+            }
+            Msg::OtherLeft(conn_id) => {
+                let other = self.others.remove(&conn_id);
+                if let Some(other) = other {
+                    println!("Player disconnected. ID - {}, nickname - {}", conn_id, other.nickname());
+                }
+            }
+            Msg::ServerNotResponding => {
+                println!("Server is not available! Closing game...");
+                ctx.quit()?;
+            }
+            Msg::Spawn(id, actor) => {
+                match actor.tag {
+                    ActorType::Asteroid => {
+                        self.rocks.insert(id, actor);
+                    }
+
+                    _ => {}
+                }
+            }
+            composition @ Msg::Composition(..) => {
+                let messages = composition.into_iter().expect("It's not possible!!11");
+                for msg in messages {
+                    self.handle_message(ctx, msg)?;
+                }
+            }
+
+            _ => {}
+        }
 
         Ok(())
     }
@@ -472,32 +485,7 @@ impl EventHandler for MainState {
         }
 
         if let Ok(msg) = self.client.try_recv() {
-            match msg {
-                Msg::JoinAck(conn_id, x, y) => {
-                    println!("Connected to server. Conn ID - {}", conn_id);
-                    self.player.set_pos(Point2::new(x, y));
-                }
-                Msg::OtherJoined(conn_id, nickname, x, y) => {
-                    println!("Player connected. ID - {}, nickname - {}, coord - ({}, {})", conn_id, nickname, x, y);
-                    let mut other = Player::new(
-                        ctx, nickname, &self.assets.small_font, constant::colors::RED
-                    )?;
-                    other.set_pos(Point2::new(x, y));
-                    self.others.insert(conn_id, other);
-                }
-                Msg::OtherLeft(conn_id) => {
-                    let other = self.others.remove(&conn_id);
-                    if let Some(other) = other {
-                        println!("Player disconnected. ID - {}, nickname - {}", conn_id, other.nickname());
-                    }
-                }
-                Msg::ServerNotResponding => {
-                    println!("Server is not available! Closing game...");
-                    ctx.quit()?;
-                }
-
-                _ => {}
-            }
+            self.handle_message(ctx, msg)?;
         }
 
         let seconds = 1.0 / (DESIRED_FPS as f32);
@@ -517,14 +505,13 @@ impl EventHandler for MainState {
             shot.handle_timed_life(seconds);
         }
 
-        for rock in &mut self.rocks {
+        for (_id, rock) in &mut self.rocks {
             rock.update_position(seconds);
             rock.wrap_position(self.screen_width as f32, self.screen_height as f32);
         }
 
         self.handle_collisions();
         self.clear_dead_stuff();
-        self.check_for_level_respawn();
 
         if self.gui_dirty {
             self.update_ui(ctx)?;
@@ -551,7 +538,7 @@ impl EventHandler for MainState {
                 draw_actor(&mut self.assets, ctx, shot, coords)?;
             }
 
-            for rock in &self.rocks {
+            for (_id, rock) in &self.rocks {
                 draw_actor(&mut self.assets, ctx, rock, coords)?;
             }
 
@@ -560,16 +547,11 @@ impl EventHandler for MainState {
             }
         }
 
-         let level_dest = graphics::Point::new(
-             (self.level_display.width() / 2) as f32 + 10.0,
-             (self.level_display.height() / 2) as f32 + 10.0
-         );
          let score_dest = graphics::Point::new(
              (self.score_display.width() / 2) as f32 + 200.0,
              (self.score_display.height() / 2) as f32 + 10.0
          );
 
-         graphics::draw(ctx, &self.level_display, level_dest, 0.0)?;
          graphics::draw(ctx, &self.score_display, score_dest, 0.0)?;
 
          self.health_bar.draw(ctx, self.player.cur_life(), self.player.max_life())?;
