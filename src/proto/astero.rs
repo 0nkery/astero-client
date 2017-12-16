@@ -314,28 +314,6 @@ pub mod mod_Spawn {
 
 use super::*;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Kind {
-    UNKNOWN = 0,
-    ASTEROID = 1,
-}
-
-impl Default for Kind {
-    fn default() -> Self {
-        Kind::UNKNOWN
-    }
-}
-
-impl From<i32> for Kind {
-    fn from(i: i32) -> Self {
-        match i {
-            0 => Kind::UNKNOWN,
-            1 => Kind::ASTEROID,
-            _ => Self::default(),
-        }
-    }
-}
-
 #[derive(Debug, PartialEq, Clone)]
 pub enum OneOfentity {
     asteroids(Asteroids),
@@ -414,38 +392,6 @@ impl<'a> MessageWrite for Message<'a> {
 pub mod mod_Message {
 
 use super::*;
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum Kind {
-    UNKNOWN = 0,
-    JOIN = 1,
-    JOIN_ACK = 2,
-    OTHER_JOINED = 3,
-    LEAVE = 4,
-    OTHER_LEFT = 5,
-    SPAWN_ASTEROID = 6,
-}
-
-impl Default for Kind {
-    fn default() -> Self {
-        Kind::UNKNOWN
-    }
-}
-
-impl From<i32> for Kind {
-    fn from(i: i32) -> Self {
-        match i {
-            0 => Kind::UNKNOWN,
-            1 => Kind::JOIN,
-            2 => Kind::JOIN_ACK,
-            3 => Kind::OTHER_JOINED,
-            4 => Kind::LEAVE,
-            5 => Kind::OTHER_LEFT,
-            6 => Kind::SPAWN_ASTEROID,
-            _ => Self::default(),
-        }
-    }
-}
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OneOfmsg<'a> {
