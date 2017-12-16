@@ -98,6 +98,37 @@ impl MessageWrite for Asteroid {
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
+pub struct Asteroids {
+    pub asteroids: Vec<Asteroid>,
+}
+
+impl<'a> MessageRead<'a> for Asteroids {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(10) => msg.asteroids = r.read_packed(bytes, |r, bytes| r.read_message::<Asteroid>(bytes))?,
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl MessageWrite for Asteroids {
+    fn get_size(&self) -> usize {
+        0
+        + if self.asteroids.is_empty() { 0 } else { 1 + sizeof_len(self.asteroids.iter().map(|s| sizeof_len((s).get_size())).sum::<usize>()) }
+    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        w.write_packed_with_tag(10, &self.asteroids, |w, m| w.write_message(m), &|m| sizeof_len((m).get_size()))?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct Join<'a> {
     pub nickname: Option<Cow<'a, str>>,
 }
@@ -246,16 +277,16 @@ impl MessageWrite for OtherLeft {
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
-pub struct SpawnAsteroid {
-    pub asteroids: Vec<Asteroid>,
+pub struct Spawn {
+    pub entity: mod_Spawn::OneOfentity,
 }
 
-impl<'a> MessageRead<'a> for SpawnAsteroid {
+impl<'a> MessageRead<'a> for Spawn {
     fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
         let mut msg = Self::default();
         while !r.is_eof() {
             match r.next_tag(bytes) {
-                Ok(10) => msg.asteroids = r.read_packed(bytes, |r, bytes| r.read_message::<Asteroid>(bytes))?,
+                Ok(10) => msg.entity = mod_Spawn::OneOfentity::asteroids(r.read_message::<Asteroids>(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -264,16 +295,59 @@ impl<'a> MessageRead<'a> for SpawnAsteroid {
     }
 }
 
-impl MessageWrite for SpawnAsteroid {
+impl MessageWrite for Spawn {
     fn get_size(&self) -> usize {
         0
-        + if self.asteroids.is_empty() { 0 } else { 1 + sizeof_len(self.asteroids.iter().map(|s| sizeof_len((s).get_size())).sum::<usize>()) }
-    }
+        + match self.entity {
+            mod_Spawn::OneOfentity::asteroids(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Spawn::OneOfentity::None => 0,
+    }    }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
-        w.write_packed_with_tag(10, &self.asteroids, |w, m| w.write_message(m), &|m| sizeof_len((m).get_size()))?;
-        Ok(())
+        match self.entity {            mod_Spawn::OneOfentity::asteroids(ref m) => { w.write_with_tag(10, |w| w.write_message(m))? },
+            mod_Spawn::OneOfentity::None => {},
+    }        Ok(())
     }
+}
+
+pub mod mod_Spawn {
+
+use super::*;
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Kind {
+    UNKNOWN = 0,
+    ASTEROID = 1,
+}
+
+impl Default for Kind {
+    fn default() -> Self {
+        Kind::UNKNOWN
+    }
+}
+
+impl From<i32> for Kind {
+    fn from(i: i32) -> Self {
+        match i {
+            0 => Kind::UNKNOWN,
+            1 => Kind::ASTEROID,
+            _ => Self::default(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum OneOfentity {
+    asteroids(Asteroids),
+    None,
+}
+
+impl Default for OneOfentity {
+    fn default() -> Self {
+        OneOfentity::None
+    }
+}
+
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
@@ -287,4 +361,108 @@ impl<'a> MessageRead<'a> for Heartbeat {
 }
 
 impl MessageWrite for Heartbeat { }
+
+#[derive(Debug, Default, PartialEq, Clone)]
+pub struct Message<'a> {
+    pub msg: mod_Message::OneOfmsg<'a>,
+}
+
+impl<'a> MessageRead<'a> for Message<'a> {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(10) => msg.msg = mod_Message::OneOfmsg::join(r.read_message::<Join>(bytes)?),
+                Ok(18) => msg.msg = mod_Message::OneOfmsg::join_ack(r.read_message::<JoinAck>(bytes)?),
+                Ok(26) => msg.msg = mod_Message::OneOfmsg::other_joined(r.read_message::<OtherJoined>(bytes)?),
+                Ok(34) => msg.msg = mod_Message::OneOfmsg::leave(r.read_message::<Leave>(bytes)?),
+                Ok(42) => msg.msg = mod_Message::OneOfmsg::other_left(r.read_message::<OtherLeft>(bytes)?),
+                Ok(50) => msg.msg = mod_Message::OneOfmsg::spawn(r.read_message::<Spawn>(bytes)?),
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl<'a> MessageWrite for Message<'a> {
+    fn get_size(&self) -> usize {
+        0
+        + match self.msg {
+            mod_Message::OneOfmsg::join(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Message::OneOfmsg::join_ack(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Message::OneOfmsg::other_joined(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Message::OneOfmsg::leave(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Message::OneOfmsg::other_left(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Message::OneOfmsg::spawn(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Message::OneOfmsg::None => 0,
+    }    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        match self.msg {            mod_Message::OneOfmsg::join(ref m) => { w.write_with_tag(10, |w| w.write_message(m))? },
+            mod_Message::OneOfmsg::join_ack(ref m) => { w.write_with_tag(18, |w| w.write_message(m))? },
+            mod_Message::OneOfmsg::other_joined(ref m) => { w.write_with_tag(26, |w| w.write_message(m))? },
+            mod_Message::OneOfmsg::leave(ref m) => { w.write_with_tag(34, |w| w.write_message(m))? },
+            mod_Message::OneOfmsg::other_left(ref m) => { w.write_with_tag(42, |w| w.write_message(m))? },
+            mod_Message::OneOfmsg::spawn(ref m) => { w.write_with_tag(50, |w| w.write_message(m))? },
+            mod_Message::OneOfmsg::None => {},
+    }        Ok(())
+    }
+}
+
+pub mod mod_Message {
+
+use super::*;
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Kind {
+    UNKNOWN = 0,
+    JOIN = 1,
+    JOIN_ACK = 2,
+    OTHER_JOINED = 3,
+    LEAVE = 4,
+    OTHER_LEFT = 5,
+    SPAWN_ASTEROID = 6,
+}
+
+impl Default for Kind {
+    fn default() -> Self {
+        Kind::UNKNOWN
+    }
+}
+
+impl From<i32> for Kind {
+    fn from(i: i32) -> Self {
+        match i {
+            0 => Kind::UNKNOWN,
+            1 => Kind::JOIN,
+            2 => Kind::JOIN_ACK,
+            3 => Kind::OTHER_JOINED,
+            4 => Kind::LEAVE,
+            5 => Kind::OTHER_LEFT,
+            6 => Kind::SPAWN_ASTEROID,
+            _ => Self::default(),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum OneOfmsg<'a> {
+    join(Join<'a>),
+    join_ack(JoinAck),
+    other_joined(OtherJoined<'a>),
+    leave(Leave),
+    other_left(OtherLeft),
+    spawn(Spawn),
+    None,
+}
+
+impl<'a> Default for OneOfmsg<'a> {
+    fn default() -> Self {
+        OneOfmsg::None
+    }
+}
+
+}
 
