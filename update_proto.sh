@@ -8,4 +8,4 @@ cd -
 
 cd proto/
 git pull
-pb-rs -s -d ../src/proto ./*.proto
+pb-rs -s -d ../src/client/proto_defs ./*.proto

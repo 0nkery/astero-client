@@ -1,3 +1,5 @@
+mod proto_defs;
+
 use std::io;
 use std::io::{Cursor, Write, Read};
 use std::iter::repeat;
