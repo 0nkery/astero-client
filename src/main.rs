@@ -11,6 +11,7 @@ extern crate byteorder;
 extern crate futures;
 extern crate tokio_core;
 extern crate smallvec;
+extern crate quick_protobuf;
 
 use std::collections::HashMap;
 use std::env;
