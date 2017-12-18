@@ -52,6 +52,7 @@ impl MessageWrite for Coord {
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct Asteroid {
+    pub id: Option<i32>,
     pub pos: Option<Coord>,
     pub velocity: Option<Coord>,
     pub facing: Option<f32>,
@@ -64,11 +65,12 @@ impl<'a> MessageRead<'a> for Asteroid {
         let mut msg = Self::default();
         while !r.is_eof() {
             match r.next_tag(bytes) {
-                Ok(10) => msg.pos = Some(r.read_message::<Coord>(bytes)?),
-                Ok(18) => msg.velocity = Some(r.read_message::<Coord>(bytes)?),
-                Ok(29) => msg.facing = Some(r.read_float(bytes)?),
-                Ok(37) => msg.rvel = Some(r.read_float(bytes)?),
-                Ok(45) => msg.life = Some(r.read_float(bytes)?),
+                Ok(8) => msg.id = Some(r.read_int32(bytes)?),
+                Ok(18) => msg.pos = Some(r.read_message::<Coord>(bytes)?),
+                Ok(26) => msg.velocity = Some(r.read_message::<Coord>(bytes)?),
+                Ok(37) => msg.facing = Some(r.read_float(bytes)?),
+                Ok(45) => msg.rvel = Some(r.read_float(bytes)?),
+                Ok(53) => msg.life = Some(r.read_float(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -80,6 +82,7 @@ impl<'a> MessageRead<'a> for Asteroid {
 impl MessageWrite for Asteroid {
     fn get_size(&self) -> usize {
         0
+        + self.id.as_ref().map_or(0, |m| 1 + sizeof_varint(*(m) as u64))
         + self.pos.as_ref().map_or(0, |m| 1 + sizeof_len((m).get_size()))
         + self.velocity.as_ref().map_or(0, |m| 1 + sizeof_len((m).get_size()))
         + self.facing.as_ref().map_or(0, |_| 1 + 4)
@@ -88,11 +91,12 @@ impl MessageWrite for Asteroid {
     }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
-        if let Some(ref s) =self.pos { w.write_with_tag(10, |w| w.write_message(s))?; }
-        if let Some(ref s) =self.velocity { w.write_with_tag(18, |w| w.write_message(s))?; }
-        if let Some(ref s) =self.facing { w.write_with_tag(29, |w| w.write_float(*s))?; }
-        if let Some(ref s) =self.rvel { w.write_with_tag(37, |w| w.write_float(*s))?; }
-        if let Some(ref s) =self.life { w.write_with_tag(45, |w| w.write_float(*s))?; }
+        if let Some(ref s) =self.id { w.write_with_tag(8, |w| w.write_int32(*s))?; }
+        if let Some(ref s) =self.pos { w.write_with_tag(18, |w| w.write_message(s))?; }
+        if let Some(ref s) =self.velocity { w.write_with_tag(26, |w| w.write_message(s))?; }
+        if let Some(ref s) =self.facing { w.write_with_tag(37, |w| w.write_float(*s))?; }
+        if let Some(ref s) =self.rvel { w.write_with_tag(45, |w| w.write_float(*s))?; }
+        if let Some(ref s) =self.life { w.write_with_tag(53, |w| w.write_float(*s))?; }
         Ok(())
     }
 }
@@ -341,21 +345,18 @@ impl<'a> MessageRead<'a> for Heartbeat {
 impl MessageWrite for Heartbeat { }
 
 #[derive(Debug, Default, PartialEq, Clone)]
-pub struct Message<'a> {
-    pub msg: mod_Message::OneOfmsg<'a>,
+pub struct Client<'a> {
+    pub msg: mod_Client::OneOfmsg<'a>,
 }
 
-impl<'a> MessageRead<'a> for Message<'a> {
+impl<'a> MessageRead<'a> for Client<'a> {
     fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
         let mut msg = Self::default();
         while !r.is_eof() {
             match r.next_tag(bytes) {
-                Ok(10) => msg.msg = mod_Message::OneOfmsg::join(r.read_message::<Join>(bytes)?),
-                Ok(18) => msg.msg = mod_Message::OneOfmsg::join_ack(r.read_message::<JoinAck>(bytes)?),
-                Ok(26) => msg.msg = mod_Message::OneOfmsg::other_joined(r.read_message::<OtherJoined>(bytes)?),
-                Ok(34) => msg.msg = mod_Message::OneOfmsg::leave(r.read_message::<Leave>(bytes)?),
-                Ok(42) => msg.msg = mod_Message::OneOfmsg::other_left(r.read_message::<OtherLeft>(bytes)?),
-                Ok(50) => msg.msg = mod_Message::OneOfmsg::spawn(r.read_message::<Spawn>(bytes)?),
+                Ok(10) => msg.msg = mod_Client::OneOfmsg::join(r.read_message::<Join>(bytes)?),
+                Ok(18) => msg.msg = mod_Client::OneOfmsg::leave(r.read_message::<Leave>(bytes)?),
+                Ok(26) => msg.msg = mod_Client::OneOfmsg::heartbeat(r.read_message::<Heartbeat>(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -364,43 +365,102 @@ impl<'a> MessageRead<'a> for Message<'a> {
     }
 }
 
-impl<'a> MessageWrite for Message<'a> {
+impl<'a> MessageWrite for Client<'a> {
     fn get_size(&self) -> usize {
         0
         + match self.msg {
-            mod_Message::OneOfmsg::join(ref m) => 1 + sizeof_len((m).get_size()),
-            mod_Message::OneOfmsg::join_ack(ref m) => 1 + sizeof_len((m).get_size()),
-            mod_Message::OneOfmsg::other_joined(ref m) => 1 + sizeof_len((m).get_size()),
-            mod_Message::OneOfmsg::leave(ref m) => 1 + sizeof_len((m).get_size()),
-            mod_Message::OneOfmsg::other_left(ref m) => 1 + sizeof_len((m).get_size()),
-            mod_Message::OneOfmsg::spawn(ref m) => 1 + sizeof_len((m).get_size()),
-            mod_Message::OneOfmsg::None => 0,
+            mod_Client::OneOfmsg::join(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Client::OneOfmsg::leave(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Client::OneOfmsg::heartbeat(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Client::OneOfmsg::None => 0,
     }    }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
-        match self.msg {            mod_Message::OneOfmsg::join(ref m) => { w.write_with_tag(10, |w| w.write_message(m))? },
-            mod_Message::OneOfmsg::join_ack(ref m) => { w.write_with_tag(18, |w| w.write_message(m))? },
-            mod_Message::OneOfmsg::other_joined(ref m) => { w.write_with_tag(26, |w| w.write_message(m))? },
-            mod_Message::OneOfmsg::leave(ref m) => { w.write_with_tag(34, |w| w.write_message(m))? },
-            mod_Message::OneOfmsg::other_left(ref m) => { w.write_with_tag(42, |w| w.write_message(m))? },
-            mod_Message::OneOfmsg::spawn(ref m) => { w.write_with_tag(50, |w| w.write_message(m))? },
-            mod_Message::OneOfmsg::None => {},
+        match self.msg {            mod_Client::OneOfmsg::join(ref m) => { w.write_with_tag(10, |w| w.write_message(m))? },
+            mod_Client::OneOfmsg::leave(ref m) => { w.write_with_tag(18, |w| w.write_message(m))? },
+            mod_Client::OneOfmsg::heartbeat(ref m) => { w.write_with_tag(26, |w| w.write_message(m))? },
+            mod_Client::OneOfmsg::None => {},
     }        Ok(())
     }
 }
 
-pub mod mod_Message {
+pub mod mod_Client {
 
 use super::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum OneOfmsg<'a> {
     join(Join<'a>),
+    leave(Leave),
+    heartbeat(Heartbeat),
+    None,
+}
+
+impl<'a> Default for OneOfmsg<'a> {
+    fn default() -> Self {
+        OneOfmsg::None
+    }
+}
+
+}
+
+#[derive(Debug, Default, PartialEq, Clone)]
+pub struct Server<'a> {
+    pub msg: mod_Server::OneOfmsg<'a>,
+}
+
+impl<'a> MessageRead<'a> for Server<'a> {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(10) => msg.msg = mod_Server::OneOfmsg::join_ack(r.read_message::<JoinAck>(bytes)?),
+                Ok(18) => msg.msg = mod_Server::OneOfmsg::other_joined(r.read_message::<OtherJoined>(bytes)?),
+                Ok(26) => msg.msg = mod_Server::OneOfmsg::other_left(r.read_message::<OtherLeft>(bytes)?),
+                Ok(34) => msg.msg = mod_Server::OneOfmsg::spawn(r.read_message::<Spawn>(bytes)?),
+                Ok(42) => msg.msg = mod_Server::OneOfmsg::heartbeat(r.read_message::<Heartbeat>(bytes)?),
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl<'a> MessageWrite for Server<'a> {
+    fn get_size(&self) -> usize {
+        0
+        + match self.msg {
+            mod_Server::OneOfmsg::join_ack(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Server::OneOfmsg::other_joined(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Server::OneOfmsg::other_left(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Server::OneOfmsg::spawn(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Server::OneOfmsg::heartbeat(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Server::OneOfmsg::None => 0,
+    }    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        match self.msg {            mod_Server::OneOfmsg::join_ack(ref m) => { w.write_with_tag(10, |w| w.write_message(m))? },
+            mod_Server::OneOfmsg::other_joined(ref m) => { w.write_with_tag(18, |w| w.write_message(m))? },
+            mod_Server::OneOfmsg::other_left(ref m) => { w.write_with_tag(26, |w| w.write_message(m))? },
+            mod_Server::OneOfmsg::spawn(ref m) => { w.write_with_tag(34, |w| w.write_message(m))? },
+            mod_Server::OneOfmsg::heartbeat(ref m) => { w.write_with_tag(42, |w| w.write_message(m))? },
+            mod_Server::OneOfmsg::None => {},
+    }        Ok(())
+    }
+}
+
+pub mod mod_Server {
+
+use super::*;
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum OneOfmsg<'a> {
     join_ack(JoinAck),
     other_joined(OtherJoined<'a>),
-    leave(Leave),
     other_left(OtherLeft),
     spawn(Spawn),
+    heartbeat(Heartbeat),
     None,
 }
 
