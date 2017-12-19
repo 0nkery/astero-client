@@ -7,7 +7,6 @@ extern crate ggez;
 extern crate rand;
 extern crate nalgebra;
 
-extern crate byteorder;
 extern crate futures;
 extern crate tokio_core;
 extern crate smallvec;
@@ -268,7 +267,7 @@ struct MainState {
     shots: Vec<Actor>,
     rocks: HashMap<u16, Actor>,
     score: i32,
-    others: HashMap<u16, Player>,
+    others: HashMap<u32, Player>,
 
     assets: Assets,
     screen_width: u32,
@@ -281,7 +280,7 @@ struct MainState {
     score_display: graphics::Text,
     health_bar: health_bar::StaticHealthBar,
 
-    client: client::Client,
+    client: client::ClientHandle,
 }
 
 impl MainState {
@@ -305,7 +304,7 @@ impl MainState {
 
         let player = Player::new(ctx, nickname.clone(), &assets.small_font, constant::colors::GREEN)?;
 
-        let client = client::Client::start();
+        let client = client::ClientHandle::start();
         client.send(Msg::Join(nickname));
 
         let screen_width = ctx.conf.window_width;
@@ -396,20 +395,20 @@ impl MainState {
 
     fn handle_message(&mut self, ctx: &mut Context, msg: Msg) -> GameResult<()> {
         match msg {
-            Msg::JoinAck(conn_id, x, y) => {
-                println!("Connected to server. Conn ID - {}", conn_id);
-                self.player.set_pos(Point2::new(x, y));
+            Msg::JoinAck(ack) => {
+                println!("Connected to server. Conn ID - {}", ack.id);
+                self.player.set_pos(ack.pos.into());
             }
-            Msg::OtherJoined(conn_id, nickname, x, y) => {
-                println!("Player connected. ID - {}, nickname - {}, coord - ({}, {})", conn_id, nickname, x, y);
-                let mut other = Player::new(
-                    ctx, nickname, &self.assets.small_font, constant::colors::RED
+            Msg::OtherJoined(other) => {
+                println!("Player connected. ID - {}, nickname - {}, coord - ({})", other.id, other.nickname, other.pos);
+                let mut player = Player::new(
+                    ctx, other.nickname, &self.assets.small_font, constant::colors::RED
                 )?;
-                other.set_pos(Point2::new(x, y));
-                self.others.insert(conn_id, other);
+                player.set_pos(other.pos);
+                self.others.insert(other.id, player);
             }
             Msg::OtherLeft(conn_id) => {
-                let other = self.others.remove(&conn_id);
+                let other = self.others.remove(&(conn_id as u32));
                 if let Some(other) = other {
                     println!("Player disconnected. ID - {}, nickname - {}", conn_id, other.nickname());
                 }

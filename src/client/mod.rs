@@ -1,27 +1,29 @@
 mod proto_defs;
-mod proto_impls;
+mod proto;
 
 use std::io;
-use std::io::{Cursor, Read};
 use std::iter::repeat;
 use std::net::{SocketAddr, SocketAddrV6, Ipv6Addr, IpAddr};
 use std::thread;
 use std::time::Duration;
 use std::sync::mpsc as std_mpsc;
 
-use byteorder::{BigEndian, ReadBytesExt};
 use futures::{Stream, Sink, Future, stream};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::{Core, Timeout};
 use smallvec::SmallVec;
-use quick_protobuf::Writer;
+use quick_protobuf::{Writer, BytesReader};
 
 use super::Actor;
-use client::proto_defs::astero::{
+use client::proto::{
     Join,
     Leave,
     Heartbeat,
+    JoinAck,
+    mod_Server,
+    Server,
+    OtherData,
 };
 
 
@@ -39,8 +41,8 @@ pub enum Msg {
     Leave,
 
     // server messages
-    JoinAck(u16, f32, f32),
-    OtherJoined(u16, String, f32, f32),
+    JoinAck(JoinAck),
+    OtherJoined(OtherData),
     OtherLeft(u16),
     ServerHeartbeat,
     Spawn(u16, Actor),
@@ -49,65 +51,12 @@ pub enum Msg {
 
 impl Msg {
     pub fn from_bytes(buf: &[u8]) -> io::Result<Self> {
-        let mut rdr = Cursor::new(buf);
+        let mut rdr = BytesReader::from_bytes(buf);
+        let msg = rdr.read_message::<Server>(&buf);
 
-        let msg = match rdr.read_i16::<BigEndian>()? {
-            0 => {
-                let id = rdr.read_u16::<BigEndian>()?;
-                let x = rdr.read_i16::<BigEndian>()? as f32;
-                let y = rdr.read_i16::<BigEndian>()? as f32;
-
-                Msg::JoinAck(id, x, y)
-            },
-
-            1 => {
-                let conn_id = rdr.read_u16::<BigEndian>()?;
-                let nickname_length = rdr.read_u8()? as usize;
-
-                let mut nickname = Vec::with_capacity(nickname_length);
-                let nickname = unsafe {
-                    nickname.set_len(nickname_length);
-                    rdr.read_exact(nickname.as_mut_slice())?;
-                    String::from_utf8_unchecked(nickname)
-                };
-
-                let x = rdr.read_i16::<BigEndian>()? as f32;
-                let y = rdr.read_i16::<BigEndian>()? as f32;
-
-                Msg::OtherJoined(conn_id, nickname, x, y)
-            }
-
-            2 => {
-                let conn_id = rdr.read_u16::<BigEndian>()?;
-
-                Msg::OtherLeft(conn_id)
-            }
-
-            3 => Msg::ServerHeartbeat,
-
-            4 => {
-                let id = rdr.read_u16::<BigEndian>()?;
-
-                let mut asteroid = Actor::create_asteroid();
-
-                asteroid.pos.x = rdr.read_f64::<BigEndian>()? as f32;
-                asteroid.pos.y = rdr.read_f64::<BigEndian>()? as f32;
-                asteroid.velocity.x = rdr.read_f64::<BigEndian>()? as f32;
-                asteroid.velocity.y = rdr.read_f64::<BigEndian>()? as f32;
-                asteroid.facing = rdr.read_f64::<BigEndian>()? as f32;
-                asteroid.rvel = rdr.read_f64::<BigEndian>()? as f32;
-                asteroid.life = rdr.read_f64::<BigEndian>()? as f32;
-
-                Msg::Spawn(id, asteroid)
-            }
-
-            5 => {
-                let vec = SmallVec::from_slice(buf);
-
-                Msg::Composition(vec)
-            }
-
-            _ => Msg::Unknown
+        let msg = match msg {
+            Err(..) => Msg::Unknown,
+            Ok(msg) => msg.into(),
         };
 
         Ok(msg)
@@ -128,6 +77,18 @@ impl Msg {
         }
 
         Ok(())
+    }
+}
+
+
+impl<'a> From<Server<'a>> for Msg {
+    fn from(msg_from_server: Server<'a>) -> Self {
+        let msg = msg_from_server.msg;
+
+        match msg {
+            mod_Server::OneOfmsg::join_ack(ack) => Msg::JoinAck(ack),
+            mod_Server::OneOfmsg::other_joined(other) => Msg::OtherJoined(other.into()),
+        }
     }
 }
 
@@ -166,14 +127,14 @@ impl UdpCodec for ClientCodec {
 }
 
 
-pub struct Client {
+pub struct ClientHandle {
     thread_handle: Option<thread::JoinHandle<()>>,
     to: Option<futures_mpsc::UnboundedSender<Msg>>,
     from: std_mpsc::Receiver<Msg>,
     timeouts: u32,
 }
 
-impl Client {
+impl ClientHandle {
     pub fn start() -> Self {
         let (to_main_thread, from_client) = std_mpsc::channel();
         let (to_client, from_main_thread) = futures_mpsc::unbounded();
@@ -225,7 +186,7 @@ impl Client {
             reactor.run(sender).expect("Client thread failure");
         });
 
-        Client {
+        ClientHandle {
             thread_handle: Some(thread_handle),
             to: Some(to_client),
             from: from_client,
