@@ -427,13 +427,6 @@ impl MainState {
                     _ => {}
                 }
             }
-            composition @ Msg::Composition(..) => {
-                let messages = composition.into_iter().expect("It's not possible!!11");
-                for msg in messages {
-                    self.handle_message(ctx, msg)?;
-                }
-            }
-
             _ => {}
         }
 

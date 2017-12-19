@@ -1,21 +1,28 @@
 mod proto_defs;
+mod proto_impls;
 
 use std::io;
-use std::io::{Cursor, Write, Read};
+use std::io::{Cursor, Read};
 use std::iter::repeat;
 use std::net::{SocketAddr, SocketAddrV6, Ipv6Addr, IpAddr};
 use std::thread;
 use std::time::Duration;
 use std::sync::mpsc as std_mpsc;
 
-use byteorder::{BigEndian, WriteBytesExt, ReadBytesExt};
+use byteorder::{BigEndian, ReadBytesExt};
 use futures::{Stream, Sink, Future, stream};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::{Core, Timeout};
 use smallvec::SmallVec;
+use quick_protobuf::Writer;
 
 use super::Actor;
+use client::proto_defs::astero::{
+    Join,
+    Leave,
+    Heartbeat,
+};
 
 
 #[derive(Debug)]
@@ -24,10 +31,12 @@ pub enum Msg {
     Unknown,
     ServerNotResponding,
 
+    // both client & server
+    Heartbeat,
+
     // client messages
     Join(String),
     Leave,
-    ClientHeartbeat,
 
     // server messages
     JoinAck(u16, f32, f32),
@@ -105,85 +114,23 @@ impl Msg {
     }
 
     pub fn into_bytes(self, buf: &mut Vec<u8>) -> io::Result<()> {
-        match self {
-            Msg::Join(nickname) => {
-                buf.write_u16::<BigEndian>(0)?;
-                buf.write_u8(nickname.len() as u8)?;
-                buf.write_all(nickname.as_bytes())?;
-            }
+        let msg = match self {
+            Msg::Join(nickname) => Some(Join::new(nickname)),
+            Msg::Leave => Some(Leave::new()),
+            Msg::Heartbeat => Some(Heartbeat::new()),
 
-            Msg::Leave => {
-                buf.write_u16::<BigEndian>(1)?;
-            }
+            _ => None
+        };
 
-            Msg::ClientHeartbeat => {
-                buf.write_u16::<BigEndian>(2)?;
-            }
-
-            _ => {}
+        if let Some(msg) = msg {
+            let mut writer = Writer::new(buf);
+            writer.write_message(&msg).map_err(|e| -> io::Error { e.into() })?;
         }
 
         Ok(())
     }
-
-    pub fn into_iter(self) -> Result<CompositionIter, Self> {
-        match self {
-            Msg::Composition(buf) => Ok(CompositionIter::new(buf)),
-            other => Err(other)
-        }
-    }
 }
 
-
-pub struct CompositionIter {
-    rdr: Cursor<SmallVec<[u8; 512]>>,
-    count: u8,
-    cur: u8,
-}
-
-impl CompositionIter {
-    pub fn new(buf: SmallVec<[u8; 512]>) -> Self {
-        let mut rdr = Cursor::new(buf);
-        rdr.read_u16::<BigEndian>().expect("Failed to skip tag from composition");
-        let count = rdr.read_u8()
-            .expect("Failed to read message count from composition");
-
-        CompositionIter {
-            rdr,
-            count,
-            cur: 0,
-        }
-    }
-}
-
-impl Iterator for CompositionIter {
-    type Item = Msg;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.cur < self.count {
-            let msg_size = self.rdr.read_u8()
-                .expect("Failed to message size from composition");
-
-            let slice_start = self.rdr.position() as usize;
-            let slice_end = slice_start + (msg_size as usize);
-
-            let msg = {
-                let buf = self.rdr.get_ref();
-
-                Msg::from_bytes(&buf[slice_start .. slice_end])
-                    .expect("Failed to read next message from composition")
-            };
-
-
-            self.rdr.set_position(slice_end as u64);
-            self.cur += 1;
-
-            return Some(msg);
-        }
-
-        None
-    }
-}
 
 struct ClientCodec {
     server: SocketAddr
@@ -323,7 +270,7 @@ impl Client {
                 self.timeouts = 0;
                 match msg {
                     Msg::ServerHeartbeat => {
-                        self.send(Msg::ClientHeartbeat);
+                        self.send(Msg::Heartbeat);
                         self.try_recv()
                     }
 
