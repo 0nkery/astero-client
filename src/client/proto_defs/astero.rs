@@ -100,7 +100,7 @@ impl MessageWrite for Asteroid {
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct Asteroids {
-    pub entities: HashMap<i32, Asteroid>,
+    pub entities: HashMap<u32, Asteroid>,
 }
 
 impl<'a> MessageRead<'a> for Asteroids {
@@ -109,7 +109,7 @@ impl<'a> MessageRead<'a> for Asteroids {
         while !r.is_eof() {
             match r.next_tag(bytes) {
                 Ok(10) => {
-                    let (key, value) = r.read_map(bytes, |r, bytes| r.read_int32(bytes), |r, bytes| r.read_message::<Asteroid>(bytes))?;
+                    let (key, value) = r.read_map(bytes, |r, bytes| r.read_uint32(bytes), |r, bytes| r.read_message::<Asteroid>(bytes))?;
                     msg.entities.insert(key, value);
                 }
                 Ok(t) => { r.read_unknown(bytes, t)?; }
@@ -127,7 +127,7 @@ impl MessageWrite for Asteroids {
     }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
-        for (k, v) in self.entities.iter() { w.write_with_tag(10, |w| w.write_map(2 + sizeof_varint(*(k) as u64) + sizeof_len((v).get_size()), 8, |w| w.write_int32(*k), 18, |w| w.write_message(v)))?; }
+        for (k, v) in self.entities.iter() { w.write_with_tag(10, |w| w.write_map(2 + sizeof_varint(*(k) as u64) + sizeof_len((v).get_size()), 8, |w| w.write_uint32(*k), 18, |w| w.write_message(v)))?; }
         Ok(())
     }
 }
@@ -165,7 +165,7 @@ impl<'a> MessageWrite for Join<'a> {
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct JoinAck {
-    pub id: i32,
+    pub id: u32,
     pub pos: Coord,
 }
 
@@ -174,7 +174,7 @@ impl<'a> MessageRead<'a> for JoinAck {
         let mut msg = Self::default();
         while !r.is_eof() {
             match r.next_tag(bytes) {
-                Ok(8) => msg.id = r.read_int32(bytes)?,
+                Ok(8) => msg.id = r.read_uint32(bytes)?,
                 Ok(18) => msg.pos = r.read_message::<Coord>(bytes)?,
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
@@ -192,7 +192,7 @@ impl MessageWrite for JoinAck {
     }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
-        w.write_with_tag(8, |w| w.write_int32(*&self.id))?;
+        w.write_with_tag(8, |w| w.write_uint32(*&self.id))?;
         w.write_with_tag(18, |w| w.write_message(&self.pos))?;
         Ok(())
     }
@@ -200,7 +200,7 @@ impl MessageWrite for JoinAck {
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct OtherJoined<'a> {
-    pub id: i32,
+    pub id: u32,
     pub nickname: Cow<'a, str>,
     pub pos: Coord,
 }
@@ -210,7 +210,7 @@ impl<'a> MessageRead<'a> for OtherJoined<'a> {
         let mut msg = Self::default();
         while !r.is_eof() {
             match r.next_tag(bytes) {
-                Ok(8) => msg.id = r.read_int32(bytes)?,
+                Ok(8) => msg.id = r.read_uint32(bytes)?,
                 Ok(18) => msg.nickname = r.read_string(bytes).map(Cow::Borrowed)?,
                 Ok(26) => msg.pos = r.read_message::<Coord>(bytes)?,
                 Ok(t) => { r.read_unknown(bytes, t)?; }
@@ -230,7 +230,7 @@ impl<'a> MessageWrite for OtherJoined<'a> {
     }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
-        w.write_with_tag(8, |w| w.write_int32(*&self.id))?;
+        w.write_with_tag(8, |w| w.write_uint32(*&self.id))?;
         w.write_with_tag(18, |w| w.write_string(&**&self.nickname))?;
         w.write_with_tag(26, |w| w.write_message(&self.pos))?;
         Ok(())
@@ -251,7 +251,7 @@ impl MessageWrite for Leave { }
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct OtherLeft {
-    pub id: i32,
+    pub id: u32,
 }
 
 impl<'a> MessageRead<'a> for OtherLeft {
@@ -259,7 +259,7 @@ impl<'a> MessageRead<'a> for OtherLeft {
         let mut msg = Self::default();
         while !r.is_eof() {
             match r.next_tag(bytes) {
-                Ok(8) => msg.id = r.read_int32(bytes)?,
+                Ok(8) => msg.id = r.read_uint32(bytes)?,
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -275,7 +275,7 @@ impl MessageWrite for OtherLeft {
     }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
-        w.write_with_tag(8, |w| w.write_int32(*&self.id))?;
+        w.write_with_tag(8, |w| w.write_uint32(*&self.id))?;
         Ok(())
     }
 }
