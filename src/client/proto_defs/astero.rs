@@ -55,8 +55,6 @@ impl MessageWrite for Coord {
 pub struct Asteroid {
     pub pos: Coord,
     pub velocity: Coord,
-    pub facing: f32,
-    pub rvel: f32,
     pub life: f32,
 }
 
@@ -67,8 +65,6 @@ impl<'a> MessageRead<'a> for Asteroid {
             match r.next_tag(bytes) {
                 Ok(10) => msg.pos = r.read_message::<Coord>(bytes)?,
                 Ok(18) => msg.velocity = r.read_message::<Coord>(bytes)?,
-                Ok(29) => msg.facing = r.read_float(bytes)?,
-                Ok(37) => msg.rvel = r.read_float(bytes)?,
                 Ok(45) => msg.life = r.read_float(bytes)?,
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
@@ -84,15 +80,11 @@ impl MessageWrite for Asteroid {
         + 1 + sizeof_len((&self.pos).get_size())
         + 1 + sizeof_len((&self.velocity).get_size())
         + 1 + 4
-        + 1 + 4
-        + 1 + 4
     }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
         w.write_with_tag(10, |w| w.write_message(&self.pos))?;
         w.write_with_tag(18, |w| w.write_message(&self.velocity))?;
-        w.write_with_tag(29, |w| w.write_float(*&self.facing))?;
-        w.write_with_tag(37, |w| w.write_float(*&self.rvel))?;
         w.write_with_tag(45, |w| w.write_float(*&self.life))?;
         Ok(())
     }
