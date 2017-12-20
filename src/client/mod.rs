@@ -1,5 +1,5 @@
 mod proto_defs;
-mod proto;
+pub mod proto;
 
 use std::io;
 use std::iter::repeat;
@@ -12,10 +12,8 @@ use futures::{Stream, Sink, Future, stream};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::{Core, Timeout};
-use smallvec::SmallVec;
 use quick_protobuf::{Writer, BytesReader};
 
-use super::Actor;
 use client::proto::{
     Join,
     Leave,
@@ -24,6 +22,8 @@ use client::proto::{
     mod_Server,
     Server,
     OtherData,
+    OtherLeft,
+    Spawn,
 };
 
 
@@ -43,10 +43,8 @@ pub enum Msg {
     // server messages
     JoinAck(JoinAck),
     OtherJoined(OtherData),
-    OtherLeft(u16),
-    ServerHeartbeat,
-    Spawn(u16, Actor),
-    Composition(SmallVec<[u8; 512]>),
+    OtherLeft(OtherLeft),
+    Spawn(Spawn),
 }
 
 impl Msg {
@@ -88,6 +86,11 @@ impl<'a> From<Server<'a>> for Msg {
         match msg {
             mod_Server::OneOfmsg::join_ack(ack) => Msg::JoinAck(ack),
             mod_Server::OneOfmsg::other_joined(other) => Msg::OtherJoined(other.into()),
+            mod_Server::OneOfmsg::other_left(other) => Msg::OtherLeft(other),
+            mod_Server::OneOfmsg::heartbeat(..) => Msg::Heartbeat,
+            mod_Server::OneOfmsg::spawn(spawn) => Msg::Spawn(spawn),
+
+            mod_Server::OneOfmsg::None => Msg::Unknown,
         }
     }
 }
@@ -230,7 +233,7 @@ impl ClientHandle {
             Ok(msg) => {
                 self.timeouts = 0;
                 match msg {
-                    Msg::ServerHeartbeat => {
+                    Msg::Heartbeat => {
                         self.send(Msg::Heartbeat);
                         self.try_recv()
                     }

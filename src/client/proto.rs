@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use util::Point2;
+use util::{Point2, Vector2};
 
 pub use super::proto_defs::astero::{
     Client,
@@ -11,11 +11,15 @@ pub use super::proto_defs::astero::{
     Heartbeat,
 
     Coord,
+    Asteroid,
 
     mod_Server,
     Server,
 
     JoinAck,
+    OtherLeft,
+    Spawn,
+    mod_Spawn::OneOfentity as Entity,
 };
 
 use super::proto_defs::astero::{
@@ -58,9 +62,29 @@ impl Heartbeat {
 }
 
 
+impl Copy for Coord {}
+
 impl Into<Point2> for Coord {
     fn into(self) -> Point2 {
         Point2::new(self.x, self.y)
+    }
+}
+
+impl From<Point2> for Coord {
+    fn from(point: Point2) -> Self {
+        Coord { x: point.x, y: point.y }
+    }
+}
+
+impl Into<Vector2> for Coord {
+    fn into(self) -> Vector2 {
+        Vector2::new(self.x, self.y)
+    }
+}
+
+impl From<Vector2> for Coord {
+    fn from(vec: Vector2) -> Self {
+        Coord { x: vec.x, y: vec.y }
     }
 }
 

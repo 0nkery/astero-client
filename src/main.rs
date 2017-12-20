@@ -2,6 +2,7 @@
 #![cfg_attr(feature="clippy", feature(clippy))]
 
 #![feature(ip_constructors)]
+#![feature(use_nested_groups)]
 
 extern crate ggez;
 extern crate rand;
@@ -9,7 +10,6 @@ extern crate nalgebra;
 
 extern crate futures;
 extern crate tokio_core;
-extern crate smallvec;
 extern crate quick_protobuf;
 
 use std::collections::HashMap;
@@ -27,19 +27,17 @@ use ggez::timer;
 
 mod client;
 use client::Msg;
+use client::proto::Entity;
 
 mod constant;
 use constant::{
     PLAYER_SHOT_TIME,
-    ROCK_BBOX,
-    ROCK_LIFE,
     SHOT_RVEL,
     SHOT_BBOX,
     SHOT_LIFE,
     SHOT_SPEED,
     MAX_PHYSICS_VEL,
     SPRITE_HALF_SIZE,
-    SPRITE_SIZE,
 };
 use constant::gui::HEALTH_BAR_SIZE;
 
@@ -47,6 +45,9 @@ mod health_bar;
 
 mod player;
 use player::Player;
+
+mod asteroid;
+use asteroid::Asteroid;
 
 mod util;
 use util::{
@@ -125,9 +126,23 @@ trait Movable {
 }
 
 
+trait Destroyable {
+    fn is_dead(&self) -> bool {
+        self.life() <= 0.0
+    }
+
+    fn is_alive(&self) -> bool {
+        !self.is_dead()
+    }
+
+    fn life(&self) -> f32;
+    fn damage(&mut self, amount: f32);
+    fn destroy(&mut self);
+}
+
+
 #[derive(Debug)]
 enum ActorType {
-    Asteroid,
     Shot
 }
 
@@ -143,18 +158,6 @@ pub struct Actor {
 }
 
 impl Actor {
-    fn create_asteroid() -> Self {
-        Actor {
-            tag: ActorType::Asteroid,
-            pos: Point2::origin(),
-            facing: 0.0,
-            velocity: nalgebra::zero(),
-            rvel: 0.0,
-            bbox_size: ROCK_BBOX,
-            life: ROCK_LIFE
-        }
-    }
-
     fn create_shot() -> Self {
         Actor {
             tag: ActorType::Shot,
@@ -235,9 +238,12 @@ impl Assets {
 
     fn actor_image(&mut self, actor: &Actor) -> &mut graphics::Image {
         match actor.tag {
-            ActorType::Asteroid => &mut self.rock_image,
             ActorType::Shot => &mut self.shot_image,
         }
+    }
+
+    fn asteroid_image(&mut self) -> &mut graphics::Image {
+        &mut self.rock_image
     }
 
     fn player_image(&mut self) -> &mut graphics::Image {
@@ -265,7 +271,7 @@ impl Default for InputState {
 struct MainState {
     player: Player,
     shots: Vec<Actor>,
-    rocks: HashMap<u16, Actor>,
+    asteroids: HashMap<u32, Asteroid>,
     score: i32,
     others: HashMap<u32, Player>,
 
@@ -320,7 +326,7 @@ impl MainState {
         let s = MainState {
             player,
             shots: Vec::new(),
-            rocks: HashMap::new(),
+            asteroids: HashMap::new(),
             score: 0,
             others: HashMap::new(),
 
@@ -357,27 +363,27 @@ impl MainState {
 
     fn clear_dead_stuff(&mut self) {
         self.shots.retain(|s| s.life > 0.0);
-        self.rocks.retain(|_, ref r| r.life > 0.0);
+        self.asteroids.retain(|_, r| r.is_alive());
     }
 
     fn handle_collisions(&mut self) {
-        for (_, rock) in &mut self.rocks {
+        for (_, rock) in &mut self.asteroids {
 
             if let Some(ref pos) = self.player.pos() {
-                let distance = rock.pos - pos;
+                let distance = rock.pos().unwrap() - pos;
                 if distance.norm() < (self.player.bbox_size() + rock.bbox_size) {
                     self.player.damage(1.0);
-                    rock.life = 0.0;
+                    rock.destroy();
                     continue;
                 }
             }
 
             for shot in &mut self.shots {
-                let distance = shot.pos - rock.pos;
+                let distance = shot.pos - rock.pos().unwrap();
                 if distance.norm() < (shot.bbox_size + rock.bbox_size) {
                     shot.life = 0.0;
-                    rock.life -= 1.0;
-                    if rock.life <= 0.0 {
+                    rock.damage(1.0);
+                    if rock.is_dead() {
                         self.score += 1;
                     }
                     self.gui_dirty = true;
@@ -407,23 +413,24 @@ impl MainState {
                 player.set_pos(other.pos);
                 self.others.insert(other.id, player);
             }
-            Msg::OtherLeft(conn_id) => {
-                let other = self.others.remove(&(conn_id as u32));
-                if let Some(other) = other {
-                    println!("Player disconnected. ID - {}, nickname - {}", conn_id, other.nickname());
+            Msg::OtherLeft(other) => {
+                let player = self.others.remove(&other.id);
+                if let Some(player) = player {
+                    println!("Player disconnected. ID - {}, nickname - {}", other.id, player.nickname());
                 }
             }
             Msg::ServerNotResponding => {
                 println!("Server is not available! Closing game...");
                 ctx.quit()?;
             }
-            Msg::Spawn(id, actor) => {
-                match actor.tag {
-                    ActorType::Asteroid => {
-                        self.rocks.insert(id, actor);
+            Msg::Spawn(spawn) => {
+                match spawn.entity {
+                    Entity::asteroids(asteroids) => {
+                        self.asteroids.extend(asteroids.entities.into_iter()
+                            .map(|(id, a)| (id, Asteroid::new(a))));
                     }
 
-                    _ => {}
+                    Entity::None => {}
                 }
             }
             _ => {}
@@ -453,17 +460,6 @@ fn draw_actor(
     let dest_point = graphics::Point::new(pos.x as f32, pos.y as f32);
     let image = assets.actor_image(actor);
     graphics::draw(ctx, image, dest_point, actor.facing as f32)?;
-
-    if let ActorType::Asteroid = actor.tag {
-        let x = pos.x;
-        let y = pos.y + SPRITE_HALF_SIZE + 4.0;
-
-        health_bar::StickyHealthBar::draw(
-            ctx, x, y,
-            SPRITE_SIZE as f32, actor.life, ROCK_LIFE,
-            None
-        )?;
-    }
 
     Ok(())
 }
@@ -497,7 +493,7 @@ impl EventHandler for MainState {
             shot.handle_timed_life(seconds);
         }
 
-        for (_id, rock) in &mut self.rocks {
+        for (_id, rock) in &mut self.asteroids {
             rock.update_position(seconds);
             rock.wrap_position(self.screen_width as f32, self.screen_height as f32);
         }
@@ -530,8 +526,8 @@ impl EventHandler for MainState {
                 draw_actor(&mut self.assets, ctx, shot, coords)?;
             }
 
-            for (_id, rock) in &self.rocks {
-                draw_actor(&mut self.assets, ctx, rock, coords)?;
+            for (_id, asteroid) in &self.asteroids {
+                asteroid.draw(ctx, &mut self.assets, coords)?;
             }
 
             for other in self.others.values() {
