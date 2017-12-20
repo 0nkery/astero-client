@@ -12,7 +12,7 @@ use futures::{Stream, Sink, Future, stream};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::{Core, Timeout};
-use quick_protobuf::{Writer, BytesReader};
+use quick_protobuf::{Writer, BytesReader, MessageWrite, MessageRead};
 
 use client::proto::{
     Join,
@@ -50,7 +50,7 @@ pub enum Msg {
 impl Msg {
     pub fn from_bytes(buf: &[u8]) -> io::Result<Self> {
         let mut rdr = BytesReader::from_bytes(buf);
-        let msg = rdr.read_message::<Server>(&buf);
+        let msg = Server::from_reader(&mut rdr, &buf);
 
         let msg = match msg {
             Err(..) => Msg::Unknown,
@@ -71,7 +71,7 @@ impl Msg {
 
         if let Some(msg) = msg {
             let mut writer = Writer::new(buf);
-            writer.write_message(&msg).map_err(|e| -> io::Error { e.into() })?;
+            msg.write_message(&mut writer).map_err(|e| -> io::Error { e.into() })?;
         }
 
         Ok(())
