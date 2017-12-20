@@ -7,5 +7,5 @@ git pull
 cd -
 
 cd proto/
-git pull
+git pull origin master
 pb-rs -s -d ../src/client/proto_defs ./*.proto
