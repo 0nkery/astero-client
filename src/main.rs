@@ -109,7 +109,7 @@ trait Movable {
         let screen_y_bounds = sy / 2.0;
         let pos = self.pos().unwrap();
 
-        let center = pos - Vector2::new(-SPRITE_HALF_SIZE, SPRITE_HALF_SIZE);
+        let center = pos + Vector2::new(pos.x.signum() * SPRITE_HALF_SIZE, pos.y.signum() * SPRITE_HALF_SIZE);
 
         if center.x > screen_x_bounds || center.x < -screen_x_bounds {
             let normal = Vector2::new(sy, 0.0);
