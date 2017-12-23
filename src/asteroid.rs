@@ -1,6 +1,7 @@
 use ggez::{Context, graphics, GameResult};
 
 use client::proto;
+use client::proto::Body;
 
 use health_bar;
 use constant::ROCK_LIFE;
@@ -10,7 +11,7 @@ use ::Movable;
 
 
 pub struct Asteroid {
-    body: proto::Body,
+    body: Body,
     life: f32,
 }
 
@@ -30,7 +31,7 @@ impl ::Destroyable for Asteroid {
 impl Asteroid {
     pub fn new(inner: proto::Asteroid) -> Self {
         Asteroid {
-            body: inner.body.into(),
+            body: Body::new(inner.body),
             life: inner.life,
         }
     }
@@ -66,7 +67,7 @@ impl Movable for Asteroid {
         self.body.wrap_position(sx, sy);
     }
 
-    fn get_body(&self) -> &proto::Body {
+    fn get_body(&self) -> &Body {
         &self.body
     }
 }

@@ -21,6 +21,24 @@ pub struct Body {
 }
 
 impl Body {
+    pub fn new(body: ProtoBody) -> Self {
+        Body {
+            pos: body.pos.into(),
+            vel: body.vel.into(),
+            rot: body.rot.unwrap_or(0.0),
+            rvel: body.rvel.unwrap_or(0.0),
+            size: body.size.unwrap_or(0.0),
+        }
+    }
+
+    pub fn update(&mut self, body: ProtoBody) {
+        self.pos = body.pos.into();
+        self.vel = body.vel.into();
+        self.rot = body.rot.unwrap_or(self.rot);
+        self.rvel = body.rvel.unwrap_or(self.rvel);
+        self.size = body.size.unwrap_or(self.size);
+    }
+
     pub fn update_position(&mut self, dt: f32) {
         if self.size <= 0.0 {
             return;
@@ -54,18 +72,6 @@ impl Body {
             let normal = Vector2::new(0.0, sx);
             self.vel = reflect_vector(self.vel, normal);
         };
-    }
-}
-
-impl From<ProtoBody> for Body {
-    fn from(body: ProtoBody) -> Body {
-        Body {
-            pos: body.pos.into(),
-            vel: body.vel.into(),
-            rot: body.rot.unwrap_or(0.0),
-            rvel: body.rvel.unwrap_or(0.0),
-            size: body.size.unwrap_or(0.0),
-        }
     }
 }
 

@@ -14,6 +14,7 @@ pub use super::proto_defs::astero::{
 
     Coord,
     Asteroid,
+    Body as ProtoBody,
 
     mod_Server,
     Server,
@@ -96,7 +97,7 @@ impl From<Vector2> for Coord {
 pub struct OtherData {
     pub id: u32,
     pub nickname: String,
-    pub body: Body,
+    pub body: ProtoBody,
 }
 
 impl<'a> Into<OtherData> for OtherJoined<'a> {
@@ -104,7 +105,7 @@ impl<'a> Into<OtherData> for OtherJoined<'a> {
         OtherData {
             id: self.id,
             nickname: self.nickname.to_string(),
-            body: self.body.into()
+            body: self.body,
         }
     }
 }

@@ -10,7 +10,7 @@ use ::{
     Assets,
     InputState,
 };
-use client::proto::Body;
+use client::proto::{Body, ProtoBody};
 use constant::{
     PLAYER_LIFE,
     PLAYER_TURN_RATE,
@@ -55,8 +55,12 @@ impl Player {
         })
     }
 
-    pub fn update_body(&mut self, body: Body) {
-        self.body = body;
+    pub fn set_body(&mut self, body: ProtoBody) {
+        self.body = Body::new(body);
+    }
+
+    pub fn update_body(&mut self, body: ProtoBody) {
+        self.body.update(body);
     }
 
     pub fn handle_input(&mut self, input: &InputState, dt: f32) {

@@ -264,14 +264,18 @@ impl MainState {
         match msg {
             Msg::JoinAck(ack) => {
                 println!("Connected to server. Conn ID - {}", ack.id);
-                self.player.update_body(ack.body.into());
+                self.player.set_body(ack.body);
             }
             Msg::OtherJoined(other) => {
-                println!("Player connected. ID - {}, nickname - {}, coord - ({})", other.id, other.nickname, other.body.pos);
+                println!(
+                    "Player connected. ID - {}, nickname - {}, coord - ({}, {})",
+                    other.id, other.nickname, other.body.pos.x, other.body.pos.y
+                );
+
                 let mut player = Player::new(
                     ctx, other.nickname, &self.assets.small_font, constant::colors::RED
                 )?;
-                player.update_body(other.body.into());
+                player.set_body(other.body);
                 self.others.insert(other.id, player);
             }
             Msg::OtherLeft(other) => {
