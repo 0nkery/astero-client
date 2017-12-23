@@ -16,3 +16,7 @@ pub fn world_to_screen_coords(screen_width: u32, screen_height: u32, point: Poin
     let y = height - (point.y + height / 2.0);
     Point2::new(x, y)
 }
+
+pub fn reflect_vector(vec: Vector2, normal: Vector2) -> Vector2 {
+    vec - 2.0 * normal * vec.dot(&normal) / normal.dot(&normal)
+}

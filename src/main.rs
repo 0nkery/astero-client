@@ -54,7 +54,8 @@ use util::{
     Point2,
     Vector2,
     vec_from_angle,
-    world_to_screen_coords
+    world_to_screen_coords,
+    reflect_vector,
 };
 
 
@@ -106,22 +107,19 @@ trait Movable {
 
         let screen_x_bounds = sx / 2.0;
         let screen_y_bounds = sy / 2.0;
-        let mut pos = self.pos().unwrap();
+        let pos = self.pos().unwrap();
 
         let center = pos - Vector2::new(-SPRITE_HALF_SIZE, SPRITE_HALF_SIZE);
 
-        if center.x > screen_x_bounds {
-            pos.x -= sx;
-        } else if center.x < -screen_x_bounds {
-            pos.x += sx;
-        }
-        if center.y > screen_y_bounds {
-            pos.y -= sy;
-        } else if center.y < -screen_y_bounds {
-            pos.y += sy;
-        }
-
-        self.set_pos(pos);
+        if center.x > screen_x_bounds || center.x < -screen_x_bounds {
+            let normal = Vector2::new(sy, 0.0);
+            let v = reflect_vector(self.velocity(), normal);
+            self.set_velocity(v);
+        } else if center.y > screen_y_bounds || center.y < -screen_y_bounds {
+            let normal = Vector2::new(0.0, sx);
+            let v = reflect_vector(self.velocity(), normal);
+            self.set_velocity(v);
+        };
     }
 }
 
