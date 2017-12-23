@@ -3,6 +3,7 @@
 
 #![feature(ip_constructors)]
 #![feature(use_nested_groups)]
+#![feature(entry_and_modify)]
 
 extern crate ggez;
 extern crate rand;
@@ -28,8 +29,9 @@ use ggez::timer;
 mod client;
 use client::Msg;
 use client::proto::{
+    SpawnEntity,
     Entity,
-    Body
+    Body,
 };
 
 mod constant;
@@ -290,12 +292,27 @@ impl MainState {
             }
             Msg::Spawn(spawn) => {
                 match spawn.entity {
-                    Entity::asteroids(asteroids) => {
+                    SpawnEntity::asteroids(asteroids) => {
                         self.asteroids.extend(asteroids.entities.into_iter()
                             .map(|(id, a)| (id, Asteroid::new(a))));
                     }
 
-                    Entity::None => {}
+                    SpawnEntity::None => {}
+                }
+            }
+            Msg::SimUpdates(updates) => {
+                for update in updates {
+                    match update.entity {
+                        Entity::ASTEROID => {
+                            if self.asteroids.contains_key(&update.id) {
+                                self.asteroids
+                                    .entry(update.id)
+                                    .and_modify(move |a| a.update_body(&update.body));
+                            }
+                        }
+
+                        _ => {}
+                    }
                 }
             }
             _ => {}

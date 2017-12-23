@@ -31,7 +31,7 @@ impl Body {
         }
     }
 
-    pub fn update(&mut self, body: ProtoBody) {
+    pub fn update(&mut self, body: &ProtoBody) {
         self.pos = body.pos.into();
         self.vel = body.vel.into();
         self.rot = body.rot.unwrap_or(self.rot);

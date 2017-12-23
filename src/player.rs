@@ -59,7 +59,7 @@ impl Player {
         self.body = Body::new(body);
     }
 
-    pub fn update_body(&mut self, body: ProtoBody) {
+    pub fn update_body(&mut self, body: &ProtoBody) {
         self.body.update(body);
     }
 

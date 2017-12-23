@@ -15,6 +15,8 @@ pub use super::proto_defs::astero::{
     Coord,
     Asteroid,
     Body as ProtoBody,
+    Entity,
+    SimUpdate,
 
     mod_Server,
     Server,
@@ -22,7 +24,7 @@ pub use super::proto_defs::astero::{
     JoinAck,
     OtherLeft,
     Spawn,
-    mod_Spawn::OneOfentity as Entity,
+    mod_Spawn::OneOfentity as SpawnEntity,
     SimUpdates,
 };
 

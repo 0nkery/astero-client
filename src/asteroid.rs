@@ -1,7 +1,10 @@
 use ggez::{Context, graphics, GameResult};
 
-use client::proto;
-use client::proto::Body;
+use client::proto::{
+    Body,
+    ProtoBody,
+    Asteroid as ProtoAsteroid,
+};
 
 use health_bar;
 use constant::ROCK_LIFE;
@@ -29,11 +32,15 @@ impl ::Destroyable for Asteroid {
 }
 
 impl Asteroid {
-    pub fn new(inner: proto::Asteroid) -> Self {
+    pub fn new(inner: ProtoAsteroid) -> Self {
         Asteroid {
             body: Body::new(inner.body),
             life: inner.life,
         }
+    }
+
+    pub fn update_body(&mut self, body: &ProtoBody) {
+        self.body.update(body);
     }
 
     pub fn draw(&self, ctx: &mut Context, assets: &mut ::Assets, world_coords: (u32, u32)) -> GameResult<()> {
