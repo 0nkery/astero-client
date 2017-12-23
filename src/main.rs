@@ -27,18 +27,13 @@ use ggez::timer;
 
 mod client;
 use client::Msg;
-use client::proto::Entity;
+use client::proto::{
+    Entity,
+    Body
+};
 
 mod constant;
-use constant::{
-    PLAYER_SHOT_TIME,
-    SHOT_RVEL,
-    SHOT_BBOX,
-    SHOT_LIFE,
-    SHOT_SPEED,
-    MAX_PHYSICS_VEL,
-    SPRITE_HALF_SIZE,
-};
+use constant::PLAYER_SHOT_TIME;
 use constant::gui::HEALTH_BAR_SIZE;
 
 mod health_bar;
@@ -49,77 +44,24 @@ use player::Player;
 mod asteroid;
 use asteroid::Asteroid;
 
+mod shot;
+use shot::Shot;
+
 mod util;
-use util::{
-    Point2,
-    Vector2,
-    vec_from_angle,
-    world_to_screen_coords,
-    reflect_vector,
-};
 
 
 trait Movable {
-    #[inline]
-    fn velocity(&self) -> Vector2;
-    #[inline]
-    fn set_velocity(&mut self, velocity: Vector2);
+    fn update_position(&mut self, dt: f32);
+    fn wrap_position(&mut self, sx: f32, sy: f32);
+    fn get_body(&self) -> &Body;
 
-    #[inline]
-    fn pos(&self) -> Option<Point2>;
-    #[inline]
-    fn set_pos(&mut self, pos: Point2);
+    fn collided<M: Movable>(&mut self, other: &M) -> bool {
+        let self_body = self.get_body();
+        let other_body = other.get_body();
 
-    #[inline]
-    fn facing(&self) -> f32;
-    #[inline]
-    fn set_facing(&mut self, facing: f32);
+        let distance = nalgebra::distance(&self_body.pos, &other_body.pos);
 
-    #[inline]
-    fn rvel(&self) -> f32;
-    #[inline]
-    fn set_rvel(&mut self, rvel: f32);
-
-    fn update_position(&mut self, dt: f32) {
-        if self.pos().is_none() {
-            return;
-        }
-
-        let mut velocity = self.velocity();
-        let norm_sq = velocity.norm_squared();
-        if norm_sq > MAX_PHYSICS_VEL.powi(2) {
-            velocity = velocity / norm_sq.sqrt() * MAX_PHYSICS_VEL;
-        }
-        self.set_velocity(velocity);
-
-        let dv = velocity * dt;
-        let pos = self.pos().unwrap() + dv;
-        self.set_pos(pos);
-
-        let facing = self.facing() + self.rvel();
-        self.set_facing(facing);
-    }
-
-    fn wrap_position(&mut self, sx: f32, sy: f32) {
-        if self.pos().is_none() {
-            return;
-        }
-
-        let screen_x_bounds = sx / 2.0;
-        let screen_y_bounds = sy / 2.0;
-        let pos = self.pos().unwrap();
-
-        let center = pos + Vector2::new(pos.x.signum() * SPRITE_HALF_SIZE, pos.y.signum() * SPRITE_HALF_SIZE);
-
-        if center.x > screen_x_bounds || center.x < -screen_x_bounds {
-            let normal = Vector2::new(sy, 0.0);
-            let v = reflect_vector(self.velocity(), normal);
-            self.set_velocity(v);
-        } else if center.y > screen_y_bounds || center.y < -screen_y_bounds {
-            let normal = Vector2::new(0.0, sx);
-            let v = reflect_vector(self.velocity(), normal);
-            self.set_velocity(v);
-        };
+        distance < (self_body.size + other_body.size)
     }
 }
 
@@ -136,75 +78,6 @@ trait Destroyable {
     fn life(&self) -> f32;
     fn damage(&mut self, amount: f32);
     fn destroy(&mut self);
-}
-
-
-#[derive(Debug)]
-enum ActorType {
-    Shot
-}
-
-#[derive(Debug)]
-pub struct Actor {
-    tag: ActorType,
-    pos: Point2,
-    facing: f32,
-    velocity: Vector2,
-    rvel: f32,
-    bbox_size: f32,
-    life: f32
-}
-
-impl Actor {
-    fn create_shot() -> Self {
-        Actor {
-            tag: ActorType::Shot,
-            pos: Point2::origin(),
-            facing: 0.,
-            velocity: nalgebra::zero(),
-            rvel: SHOT_RVEL,
-            bbox_size: SHOT_BBOX,
-            life: SHOT_LIFE
-        }
-    }
-
-    fn handle_timed_life(&mut self, dt: f32) {
-        self.life -= dt;
-    }
-}
-
-impl Movable for Actor {
-    fn velocity(&self) -> Vector2 {
-        self.velocity
-    }
-
-    fn set_velocity(&mut self, velocity: Vector2) {
-        self.velocity = velocity;
-    }
-
-    fn pos(&self) -> Option<Point2> {
-        Some(self.pos)
-    }
-
-    fn set_pos(&mut self, pos: Point2) {
-        self.pos = pos;
-    }
-
-    fn facing(&self) -> f32 {
-        self.facing
-    }
-
-    fn set_facing(&mut self, facing: f32) {
-        self.facing = facing;
-    }
-
-    fn rvel(&self) -> f32 {
-        self.rvel
-    }
-
-    fn set_rvel(&mut self, rvel: f32) {
-        self.rvel = rvel;
-    }
 }
 
 
@@ -234,10 +107,8 @@ impl Assets {
         })
     }
 
-    fn actor_image(&mut self, actor: &Actor) -> &mut graphics::Image {
-        match actor.tag {
-            ActorType::Shot => &mut self.shot_image,
-        }
+    fn shot_image(&mut self) -> &mut graphics::Image {
+        &mut self.shot_image
     }
 
     fn asteroid_image(&mut self) -> &mut graphics::Image {
@@ -268,7 +139,7 @@ impl Default for InputState {
 
 struct MainState {
     player: Player,
-    shots: Vec<Actor>,
+    shots: Vec<Shot>,
     asteroids: HashMap<u32, Asteroid>,
     score: i32,
     others: HashMap<u32, Player>,
@@ -346,40 +217,32 @@ impl MainState {
     }
 
     fn fire_player_shot(&mut self) {
-        if self.player.pos().is_none() {
+        if !self.player.is_ready() {
             return;
         }
 
         self.player_shot_timeout = PLAYER_SHOT_TIME;
-        let mut shot = Actor::create_shot();
-        shot.pos = self.player.pos().unwrap();
-        shot.facing = self.player.facing();
-        let direction = vec_from_angle(shot.facing);
-        shot.velocity = direction * SHOT_SPEED;
+        let shot = self.player.fire();
         self.shots.push(shot);
     }
 
     fn clear_dead_stuff(&mut self) {
-        self.shots.retain(|s| s.life > 0.0);
+        self.shots.retain(|s| s.is_alive());
         self.asteroids.retain(|_, r| r.is_alive());
     }
 
     fn handle_collisions(&mut self) {
         for (_, rock) in &mut self.asteroids {
 
-            if let Some(ref pos) = self.player.pos() {
-                let distance = rock.pos().unwrap() - pos;
-                if distance.norm() < (self.player.bbox_size() + rock.bbox_size) {
-                    self.player.damage(1.0);
-                    rock.destroy();
-                    continue;
-                }
+            if self.player.collided(rock) {
+                self.player.damage(1.0);
+                rock.destroy();
+                continue;
             }
 
             for shot in &mut self.shots {
-                let distance = shot.pos - rock.pos().unwrap();
-                if distance.norm() < (shot.bbox_size + rock.bbox_size) {
-                    shot.life = 0.0;
+                if shot.collided(rock) {
+                    shot.destroy();
                     rock.damage(1.0);
                     if rock.is_dead() {
                         self.score += 1;
@@ -401,14 +264,14 @@ impl MainState {
         match msg {
             Msg::JoinAck(ack) => {
                 println!("Connected to server. Conn ID - {}", ack.id);
-                self.player.set_pos(ack.pos.into());
+                self.player.update_body(ack.body.into());
             }
             Msg::OtherJoined(other) => {
-                println!("Player connected. ID - {}, nickname - {}, coord - ({})", other.id, other.nickname, other.pos);
+                println!("Player connected. ID - {}, nickname - {}, coord - ({})", other.id, other.nickname, other.body.pos);
                 let mut player = Player::new(
                     ctx, other.nickname, &self.assets.small_font, constant::colors::RED
                 )?;
-                player.set_pos(other.pos);
+                player.update_body(other.body.into());
                 self.others.insert(other.id, player);
             }
             Msg::OtherLeft(other) => {
@@ -447,21 +310,6 @@ fn print_instructions() {
     println!();
 }
 
-fn draw_actor(
-    assets: &mut Assets,
-    ctx: &mut Context,
-    actor: &Actor,
-    world_coords: (u32, u32)) -> GameResult<()>
-{
-    let (screen_w, screen_h) = world_coords;
-    let pos = world_to_screen_coords(screen_w, screen_h, actor.pos);
-    let dest_point = graphics::Point::new(pos.x as f32, pos.y as f32);
-    let image = assets.actor_image(actor);
-    graphics::draw(ctx, image, dest_point, actor.facing as f32)?;
-
-    Ok(())
-}
-
 impl EventHandler for MainState {
 
     fn update(&mut self, ctx: &mut Context, _dt: Duration) -> GameResult<()> {
@@ -488,7 +336,6 @@ impl EventHandler for MainState {
         for shot in &mut self.shots {
             shot.update_position(seconds);
             shot.wrap_position(self.screen_width as f32, self.screen_height as f32);
-            shot.handle_timed_life(seconds);
         }
 
         for (_id, rock) in &mut self.asteroids {
@@ -504,7 +351,7 @@ impl EventHandler for MainState {
             self.gui_dirty = false;
         }
 
-        if self.player.cur_life() <= 0.0 {
+        if self.player.is_dead() {
             println!("Game over!");
             ctx.quit()?;
         }
@@ -521,7 +368,7 @@ impl EventHandler for MainState {
             self.player.draw(ctx, &mut self.assets, coords)?;
 
             for shot in &self.shots {
-                draw_actor(&mut self.assets, ctx, shot, coords)?;
+                shot.draw(ctx, &mut self.assets, coords)?;
             }
 
             for (_id, asteroid) in &self.asteroids {
@@ -540,7 +387,7 @@ impl EventHandler for MainState {
 
          graphics::draw(ctx, &self.score_display, score_dest, 0.0)?;
 
-         self.health_bar.draw(ctx, self.player.cur_life(), self.player.max_life())?;
+         self.health_bar.draw(ctx, self.player.life(), self.player.max_life())?;
 
          graphics::present(ctx);
 

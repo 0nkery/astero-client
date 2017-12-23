@@ -27,15 +27,7 @@ pub const PLAYER_LIFE: f32 = 3.0;
 pub const SHOT_LIFE: f32 = 2.0;
 pub const ROCK_LIFE: f32 = 2.0;
 
-pub const PLAYER_BBOX: f32 = 12.0;
-pub const ROCK_BBOX: f32 = 12.0;
-pub const SHOT_BBOX: f32 = 6.0;
-
 pub const SHOT_SPEED: f32 = 200.0;
-pub const SHOT_RVEL: f32 = 0.1;
-
-pub const SPRITE_SIZE: u32 = 32;
-pub const SPRITE_HALF_SIZE: f32 = (SPRITE_SIZE / 2) as f32;
 
 pub const PLAYER_ACCELERATION: f32 = 100.0;
 pub const PLAYER_DECELERATION: f32 = 10.0;

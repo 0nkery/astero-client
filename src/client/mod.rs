@@ -1,5 +1,6 @@
 mod proto_defs;
 pub mod proto;
+mod body;
 
 use std::io;
 use std::iter::repeat;
@@ -24,6 +25,7 @@ use client::proto::{
     OtherData,
     OtherLeft,
     Spawn,
+    SimUpdates,
 };
 
 
@@ -45,6 +47,7 @@ pub enum Msg {
     OtherJoined(OtherData),
     OtherLeft(OtherLeft),
     Spawn(Spawn),
+    SimUpdates(SimUpdates),
 }
 
 impl Msg {
@@ -89,6 +92,7 @@ impl<'a> From<Server<'a>> for Msg {
             mod_Server::OneOfmsg::other_left(other) => Msg::OtherLeft(other),
             mod_Server::OneOfmsg::heartbeat(..) => Msg::Heartbeat,
             mod_Server::OneOfmsg::spawn(spawn) => Msg::Spawn(spawn),
+            mod_Server::OneOfmsg::sim_updates(updates) => Msg::SimUpdates(updates),
 
             mod_Server::OneOfmsg::None => Msg::Unknown,
         }

@@ -5,37 +5,31 @@ use ggez::{
     GameResult,
     graphics,
 };
-use nalgebra;
 
-use super::{
+use ::{
     Assets,
     InputState,
-    Movable,
 };
+use client::proto::Body;
 use constant::{
-    PLAYER_BBOX,
     PLAYER_LIFE,
     PLAYER_TURN_RATE,
     PLAYER_ACCELERATION,
     PLAYER_DECELERATION,
-    SPRITE_SIZE,
-    SPRITE_HALF_SIZE,
 };
+use shot::Shot;
 use health_bar::StickyHealthBar;
 use util::{
-    Point2,
-    Vector2,
     vec_from_angle,
     world_to_screen_coords,
 };
 
+use ::Movable;
+use ::Destroyable;
+
 
 pub struct Player {
-    pos: Option<Point2>,
-    facing: f32,
-    velocity: Vector2,
-    rvel: f32,
-    bbox_size: f32,
+    body: Body,
     life: f32,
     nickname: String,
     nickname_display: graphics::Text,
@@ -53,11 +47,7 @@ impl Player {
         let nickname_display = graphics::Text::new(ctx, &nickname, font)?;
 
         Ok(Player {
-            pos: None,
-            facing: 0.0,
-            velocity: nalgebra::zero(),
-            rvel: 0.0,
-            bbox_size: PLAYER_BBOX,
+            body: Body::default(),
             life: PLAYER_LIFE,
             nickname,
             nickname_display,
@@ -65,12 +55,16 @@ impl Player {
         })
     }
 
+    pub fn update_body(&mut self, body: Body) {
+        self.body = body;
+    }
+
     pub fn handle_input(&mut self, input: &InputState, dt: f32) {
-        if self.pos.is_none() {
+        if !self.is_ready() {
             return;
         }
 
-        self.facing += dt * PLAYER_TURN_RATE * input.xaxis;
+        self.body.rot += dt * PLAYER_TURN_RATE * input.xaxis;
 
         if input.yaxis > 0.0 {
             self.accelerate(dt);
@@ -80,38 +74,40 @@ impl Player {
     }
 
     fn accelerate(&mut self, dt: f32) {
-        let direction_vector = vec_from_angle(self.facing);
+        let direction_vector = vec_from_angle(self.body.rot);
         let acceleration = direction_vector * PLAYER_ACCELERATION;
-        self.velocity += acceleration * dt;
+        self.body.vel += acceleration * dt;
     }
 
     fn decelerate(&mut self, dt: f32) {
-        let direction_vector = vec_from_angle(self.facing + std::f32::consts::PI);
+        let direction_vector = vec_from_angle(self.body.rot + std::f32::consts::PI);
         let deceleration_vector = direction_vector * PLAYER_DECELERATION;
-        self.velocity += deceleration_vector * dt;
+        self.body.vel += deceleration_vector * dt;
     }
 
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets, coords: (u32, u32)) -> GameResult<()> {
-        if let Some(ref pos) = self.pos {
+        if self.is_ready() {
             let (screen_w, screen_h) = coords;
             let pos = world_to_screen_coords(
-                screen_w, screen_h, *pos
+                screen_w, screen_h, self.body.pos
             );
             let dest_point = graphics::Point::new(pos.x as f32, pos.y as f32);
             let image = assets.player_image();
 
-            graphics::draw(ctx, image, dest_point, self.facing)?;
+            graphics::draw(ctx, image, dest_point, self.body.rot)?;
+
+            let half_size = self.body.size / 2.0;
 
             StickyHealthBar::draw(
-                ctx, pos.x, pos.y + SPRITE_HALF_SIZE + 6.0,
-                SPRITE_SIZE as f32, self.cur_life(), self.max_life(),
+                ctx, pos.x, pos.y + half_size + 6.0,
+                self.body.size, self.life(), self.max_life(),
                 Some(self.color)
             )?;
 
             let old_color = graphics::get_color(ctx);
             graphics::set_color(ctx, self.color)?;
 
-            let nickname_dest = graphics::Point::new(pos.x, pos.y - SPRITE_HALF_SIZE - 7.0);
+            let nickname_dest = graphics::Point::new(pos.x, pos.y - half_size - 7.0);
             graphics::draw(ctx, &self.nickname_display, nickname_dest, 0.0)?;
 
             graphics::set_color(ctx, old_color)?;
@@ -119,23 +115,21 @@ impl Player {
 
         Ok(())
     }
+
+    pub fn fire(&self) -> Shot {
+        Shot::new()
+            .with_coord(self.body.pos)
+            .with_rot(self.body.rot)
+    }
+
+    pub fn is_ready(&self) -> bool {
+        self.body.size > 0.0
+    }
 }
 
 impl Player {
-    pub fn cur_life(&self) -> f32 {
-        self.life
-    }
-
     pub fn max_life(&self) -> f32 {
         PLAYER_LIFE
-    }
-
-    pub fn bbox_size(&self) -> f32 {
-        self.bbox_size
-    }
-
-    pub fn damage(&mut self, dmg: f32) {
-        self.life -= dmg;
     }
 
     pub fn nickname(&self) -> &str {
@@ -143,36 +137,30 @@ impl Player {
     }
 }
 
+impl Destroyable for Player {
+    fn life(&self) -> f32 {
+        self.life
+    }
+
+    fn damage(&mut self, amount: f32) {
+        self.life -= amount;
+    }
+
+    fn destroy(&mut self) {
+        self.life = 0.0;
+    }
+}
+
 impl Movable for Player {
-    fn velocity(&self) -> Vector2 {
-        self.velocity
+    fn update_position(&mut self, dt: f32) {
+        self.body.update_position(dt);
     }
 
-    fn set_velocity(&mut self, velocity: Vector2) {
-        self.velocity = velocity;
+    fn wrap_position(&mut self, sx: f32, sy: f32) {
+        self.body.wrap_position(sx, sy);
     }
 
-    fn pos(&self) -> Option<Point2> {
-        self.pos
-    }
-
-    fn set_pos(&mut self, pos: Point2) {
-        self.pos = Some(pos);
-    }
-
-    fn facing(&self) -> f32 {
-        self.facing
-    }
-
-    fn set_facing(&mut self, facing: f32) {
-        self.facing = facing;
-    }
-
-    fn rvel(&self) -> f32 {
-        self.rvel
-    }
-
-    fn set_rvel(&mut self, rvel: f32) {
-        self.rvel = rvel;
+    fn get_body(&self) -> &Body {
+        &self.body
     }
 }

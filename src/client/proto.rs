@@ -2,6 +2,8 @@ use std::borrow::Cow;
 
 use util::{Point2, Vector2};
 
+pub use super::body::Body;
+
 pub use super::proto_defs::astero::{
     Client,
     mod_Client,
@@ -20,6 +22,7 @@ pub use super::proto_defs::astero::{
     OtherLeft,
     Spawn,
     mod_Spawn::OneOfentity as Entity,
+    SimUpdates,
 };
 
 use super::proto_defs::astero::{
@@ -93,7 +96,7 @@ impl From<Vector2> for Coord {
 pub struct OtherData {
     pub id: u32,
     pub nickname: String,
-    pub pos: Point2,
+    pub body: Body,
 }
 
 impl<'a> Into<OtherData> for OtherJoined<'a> {
@@ -101,7 +104,7 @@ impl<'a> Into<OtherData> for OtherJoined<'a> {
         OtherData {
             id: self.id,
             nickname: self.nickname.to_string(),
-            pos: self.pos.into()
+            body: self.body.into()
         }
     }
 }
