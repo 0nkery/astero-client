@@ -442,7 +442,7 @@ impl Default for OneOfentity {
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct SimUpdates {
-    pub updates: Vec<SimUpdates>,
+    pub updates: Vec<SimUpdate>,
 }
 
 impl<'a> MessageRead<'a> for SimUpdates {
@@ -450,7 +450,7 @@ impl<'a> MessageRead<'a> for SimUpdates {
         let mut msg = Self::default();
         while !r.is_eof() {
             match r.next_tag(bytes) {
-                Ok(10) => msg.updates.push(r.read_message::<SimUpdates>(bytes)?),
+                Ok(10) => msg.updates.push(r.read_message::<SimUpdate>(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
