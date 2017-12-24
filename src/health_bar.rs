@@ -20,7 +20,7 @@ impl StaticHealthBar {
         StaticHealthBar {x, y, width, height}
     }
 
-    pub fn draw(&self, ctx: &mut Context, cur: f32, max: f32) -> GameResult<()> {
+    pub fn draw(&self, ctx: &mut Context, fraction: f32) -> GameResult<()> {
         let old_color = graphics::get_color(ctx);
 
         graphics::set_color(ctx, colors::LIGHT_BLUE)?;
@@ -32,12 +32,19 @@ impl StaticHealthBar {
 
         graphics::set_color(ctx, colors::RED)?;
 
-        let health_bar_width = (self.width - STATIC_HEALTH_BAR_LINE_WIDTH) * (cur / max);
-        let health_bar_height = self.height - STATIC_HEALTH_BAR_LINE_WIDTH;
+        let width = (self.width - STATIC_HEALTH_BAR_LINE_WIDTH) * fraction;
+        let height = self.height - STATIC_HEALTH_BAR_LINE_WIDTH;
+
+        let half_line_width = STATIC_HEALTH_BAR_LINE_WIDTH / 2.0;
 
         graphics::rectangle(
             ctx, graphics::DrawMode::Fill,
-            graphics::Rect::new(self.x, self.y, health_bar_width, health_bar_height)
+            graphics::Rect::new(
+                self.x + self.width / 2.0 - width / 2.0,
+                self.y + half_line_width,
+                width,
+                height
+            )
         )?;
 
         graphics::set_color(ctx, old_color)?;

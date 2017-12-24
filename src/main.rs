@@ -185,8 +185,8 @@ impl MainState {
         let screen_height = ctx.conf.window_mode.height;
 
         let health_bar = health_bar::StaticHealthBar::new(
-            (screen_width / 4 + 10) as f32,
-            (screen_height - 30) as f32,
+            10 as f32,
+            screen_height as f32 - HEALTH_BAR_SIZE - 5.0,
             (screen_width / 2) as f32,
             HEALTH_BAR_SIZE
         );
@@ -427,7 +427,7 @@ impl EventHandler for MainState {
 
          graphics::draw(ctx, &self.score_display, score_dest, 0.0)?;
 
-         self.health_bar.draw(ctx, self.player.life(), self.player.max_life())?;
+         self.health_bar.draw(ctx, self.player.life() / self.player.max_life())?;
 
          graphics::present(ctx);
 
