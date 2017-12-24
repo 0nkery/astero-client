@@ -93,13 +93,19 @@ impl Player {
             let (sw, sh) = coords;
             let pos = world_to_screen_coords(sw, sh, self.body.pos);
 
+            let image = assets.player_image();
+
             graphics::draw_ex(
                 ctx,
-                assets.player_image(),
+                image,
                 graphics::DrawParam {
                     dest: pos,
                     rotation: self.body.rot,
                     offset: graphics::Point2::new(0.5, 0.5),
+                    scale: graphics::Point2::new(
+                        self.body.size / image.width() as f32,
+                        self.body.size / image.height() as f32
+                    ),
                     .. Default::default()
                 }
             )?;

@@ -60,7 +60,7 @@ trait Movable {
 
         let distance = ggez::nalgebra::distance(&self_body.pos, &other_body.pos);
 
-        distance < (self_body.size + other_body.size)
+        distance < (self_body.size / 2.0 + other_body.size / 2.0)
     }
 }
 
