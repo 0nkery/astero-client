@@ -313,6 +313,11 @@ impl MainState {
                     }
                 }
             }
+            Msg::OtherInput(other) => {
+                self.others
+                    .get_mut(&other.id)
+                    .map_or((),|o| o.update_input(&other.input));
+            }
             _ => {}
         }
 

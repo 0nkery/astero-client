@@ -27,6 +27,7 @@ pub use super::proto_defs::astero::{
     Spawn,
     mod_Spawn::OneOfentity as SpawnEntity,
     SimUpdates,
+    OtherInput,
 };
 
 use super::proto_defs::astero::{
