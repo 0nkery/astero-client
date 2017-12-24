@@ -54,22 +54,24 @@ const STICKY_HEIGHT: f32 = 3.0;
 impl StickyHealthBar {
     pub fn draw(
         ctx: &mut Context,
-        x: f32,
-        y: f32,
-        width: f32,
-        cur: f32,
-        max: f32,
+        pos: graphics::Point2,
+        size: f32,
+        fraction: f32,
         color: Option<graphics::Color>
     ) -> GameResult<()> {
 
         let old_color = graphics::get_color(ctx);
-        graphics::set_color(ctx, color.or(Some(colors::RED)).unwrap())?;
+        graphics::set_color(ctx, color.unwrap_or(colors::RED))?;
 
-        let width = width * (cur / max);
+        let width = size * fraction;
 
         graphics::rectangle(
             ctx, graphics::DrawMode::Fill,
-            graphics::Rect::new(x, y, width, STICKY_HEIGHT)
+            graphics::Rect::new(
+                pos.x - width / 2.0,
+                pos.y + size / 2.0 + STICKY_HEIGHT,
+                width, STICKY_HEIGHT
+            )
         )?;
 
         graphics::set_color(ctx, old_color)?;

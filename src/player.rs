@@ -104,11 +104,9 @@ impl Player {
                 }
             )?;
 
-            let half_size = self.body.size / 2.0;
-
             StickyHealthBar::draw(
-                ctx, pos.x, pos.y + half_size + 6.0,
-                self.body.size, self.life(), self.max_life(),
+                ctx, pos, self.body.size,
+                self.life() / self.max_life(),
                 Some(self.color)
             )?;
 

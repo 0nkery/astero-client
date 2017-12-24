@@ -334,10 +334,6 @@ impl EventHandler for MainState {
         const DESIRED_FPS: u32 = 60;
 
         while timer::check_update_time(ctx, DESIRED_FPS) {
-            if let Ok(msg) = self.client.try_recv() {
-                self.handle_message(ctx, msg)?;
-            }
-
             let seconds = 1.0 / (DESIRED_FPS as f32);
 
             self.player.handle_input(&self.input, seconds);
@@ -360,6 +356,11 @@ impl EventHandler for MainState {
             }
 
             self.handle_collisions();
+
+            if let Ok(msg) = self.client.try_recv() {
+                self.handle_message(ctx, msg)?;
+            }
+
             self.clear_dead_stuff();
 
             if self.gui_dirty {

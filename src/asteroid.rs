@@ -44,20 +44,22 @@ impl Asteroid {
     }
 
     pub fn draw(&self, ctx: &mut Context, assets: &mut ::Assets, world_coords: (u32, u32)) -> GameResult<()> {
-        let (screen_w, screen_h) = world_coords;
-        let pos = self.body.pos;
-        let pos = world_to_screen_coords(screen_w, screen_h, pos);
-        let dest_point = graphics::Point2::new(pos.x as f32, pos.y as f32);
-        let image = assets.asteroid_image();
-        graphics::draw(ctx, image, dest_point, self.body.rot)?;
+        let (sw, sh) = world_coords;
+        let pos = world_to_screen_coords(sw, sh, self.body.pos);
 
-        let x = pos.x;
-        let y = pos.y + self.body.size / 2.0 + 4.0;
+        graphics::draw_ex(
+            ctx,
+            assets.asteroid_image(),
+            graphics::DrawParam {
+                dest: pos,
+                offset: graphics::Point2::new(0.5, 0.5),
+                .. Default::default()
+            }
+        )?;
 
         health_bar::StickyHealthBar::draw(
-            ctx, x, y,
-            self.body.size, self.life, ROCK_LIFE,
-            None
+            ctx, pos, self.body.size,
+            self.life / ROCK_LIFE, None
         )?;
 
         Ok(())
