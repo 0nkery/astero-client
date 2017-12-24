@@ -122,7 +122,6 @@ impl Assets {
 
 #[derive(Debug)]
 pub struct InputState {
-    xaxis: f32,
     yaxis: f32,
     fire: bool,
 }
@@ -131,7 +130,6 @@ impl Default for InputState {
     fn default() -> Self {
         InputState {
             fire: false,
-            xaxis: 0.0,
             yaxis: 0.0,
         }
     }
@@ -350,6 +348,11 @@ impl EventHandler for MainState {
 
             self.player.update_position(seconds);
             self.player.wrap_position(self.screen_width as f32, self.screen_height as f32);
+
+            for (_id, player) in &mut self.others {
+                player.update_position(seconds);
+                player.wrap_position(self.screen_width as f32, self.screen_height as f32);
+            }
 
             for shot in &mut self.shots {
                 shot.update_position(seconds);

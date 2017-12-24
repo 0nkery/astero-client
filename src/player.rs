@@ -77,8 +77,6 @@ impl Player {
             return;
         }
 
-        self.body.rotate(dt, input.xaxis);
-
         if input.yaxis > 0.0 {
             self.accelerate(dt);
         } else if input.yaxis < 0.0 {
@@ -181,6 +179,7 @@ impl Destroyable for Player {
 
 impl Movable for Player {
     fn update_position(&mut self, dt: f32) {
+        self.body.rotate(dt, self.input.turn.unwrap_or(0) as f32);
         self.body.update_position(dt);
     }
 
