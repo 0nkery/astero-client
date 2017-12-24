@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use util::{Point2, Vector2};
+use ggez::graphics::{Point2, Vector2};
 
 pub use super::body::Body;
 

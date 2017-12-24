@@ -1,8 +1,7 @@
-use util::{
-    Point2,
-    Vector2,
-    reflect_vector,
-};
+use ggez::graphics::{Point2, Vector2};
+use ggez::nalgebra;
+
+use util::reflect_vector;
 
 use constant::MAX_PHYSICS_VEL;
 
@@ -79,8 +78,6 @@ impl Body {
 
 impl Default for Body {
     fn default() -> Self {
-        use nalgebra;
-
         Body {
             pos: Point2::origin(),
             vel: nalgebra::zero(),

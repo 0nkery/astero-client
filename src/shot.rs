@@ -1,5 +1,6 @@
 use ggez::{
     graphics,
+    graphics::Point2,
     Context,
     GameResult,
 };
@@ -11,7 +12,6 @@ use constant::{
 };
 use client::proto::Body;
 use util::{
-    Point2,
     vec_from_angle,
     world_to_screen_coords,
 };

@@ -7,7 +7,6 @@
 
 extern crate ggez;
 extern crate rand;
-extern crate nalgebra;
 
 extern crate futures;
 extern crate tokio_core;
@@ -59,7 +58,7 @@ trait Movable {
         let self_body = self.get_body();
         let other_body = other.get_body();
 
-        let distance = nalgebra::distance(&self_body.pos, &other_body.pos);
+        let distance = ggez::nalgebra::distance(&self_body.pos, &other_body.pos);
 
         distance < (self_body.size + other_body.size)
     }

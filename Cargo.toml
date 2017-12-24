@@ -6,7 +6,6 @@ authors = ["Dmitry Shlagoff <richyannet@yandex.ru>"]
 [dependencies]
 ggez = "0.4.0-rc.2"
 rand = "0.3"
-nalgebra = "0.13"
 futures = "0.1"
 tokio-core = "0.1"
 quick-protobuf = "0.6"

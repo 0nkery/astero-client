@@ -70,7 +70,6 @@ dependencies = [
  "clippy 0.0.177 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "ggez 0.4.0-rc.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "nalgebra 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-protobuf 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.11 (registry+https://github.com/rust-lang/crates.io-index)",

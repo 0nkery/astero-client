@@ -1,8 +1,4 @@
-use nalgebra;
-
-
-pub type Point2 = nalgebra::Point2<f32>;
-pub type Vector2 = nalgebra::Vector2<f32>;
+use ggez::graphics::{Vector2, Point2};
 
 
 pub fn vec_from_angle(angle: f32) -> Vector2 {
