@@ -136,6 +136,7 @@ impl Default for InputState {
 }
 
 struct MainState {
+    player_id: u32,
     player: Player,
     shots: Vec<Shot>,
     asteroids: HashMap<u32, Asteroid>,
@@ -191,6 +192,7 @@ impl MainState {
         );
 
         let s = MainState {
+            player_id: 0,
             player,
             shots: Vec::new(),
             asteroids: HashMap::new(),
@@ -263,6 +265,7 @@ impl MainState {
             Msg::JoinAck(ack) => {
                 println!("Connected to server. Conn ID - {}", ack.id);
                 self.player.set_body(ack.body);
+                self.player_id = ack.id;
             }
             Msg::OtherJoined(other) => {
                 println!(
@@ -303,11 +306,21 @@ impl MainState {
                             if self.asteroids.contains_key(&update.id) {
                                 self.asteroids
                                     .entry(update.id)
-                                    .and_modify(move |a| a.update_body(&update.body));
+                                    .and_modify(|a| a.update_body(&update.body));
                             }
                         }
 
-                        _ => {}
+                        Entity::PLAYER => {
+                            if update.id == self.player_id {
+                                self.player.update_body(&update.body);
+                            } else {
+                                self.others
+                                    .entry(update.id)
+                                    .and_modify(|p| p.update_body(&update.body));
+                            }
+                        }
+
+                        Entity::UNKNOWN_ENTITY => {}
                     }
                 }
             }
