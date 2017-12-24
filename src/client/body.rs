@@ -51,8 +51,10 @@ impl Body {
 
         let dv = self.vel * dt;
         self.pos += dv;
+    }
 
-        self.rot += self.rvel;
+    pub fn rotate(&mut self, dt: f32, direction: f32) {
+        self.rot += self.rvel * dt * direction;
     }
 
     pub fn wrap_position(&mut self, sx: f32, sy: f32) {
