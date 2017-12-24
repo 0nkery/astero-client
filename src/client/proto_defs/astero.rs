@@ -20,6 +20,7 @@ use super::*;
 pub enum Entity {
     UNKNOWN_ENTITY = 0,
     ASTEROID = 1,
+    PLAYER = 2,
 }
 
 impl Default for Entity {
@@ -33,6 +34,7 @@ impl From<i32> for Entity {
         match i {
             0 => Entity::UNKNOWN_ENTITY,
             1 => Entity::ASTEROID,
+            2 => Entity::PLAYER,
             _ => Self::default(),
         }
     }
