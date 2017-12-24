@@ -112,13 +112,19 @@ impl Player {
                 Some(self.color)
             )?;
 
-            let old_color = graphics::get_color(ctx);
-            graphics::set_color(ctx, self.color)?;
-
-            let nickname_dest = graphics::Point2::new(pos.x, pos.y - half_size - 7.0);
-            graphics::draw(ctx, &self.nickname_display, nickname_dest, 0.0)?;
-
-            graphics::set_color(ctx, old_color)?;
+            let dest = graphics::Point2::new(
+                pos.x - (self.nickname_display.width() / 2) as f32,
+                pos.y - self.body.size / 2.0 - self.nickname_display.height() as f32,
+            );
+            graphics::draw_ex(
+                ctx,
+                &self.nickname_display,
+                graphics::DrawParam {
+                    dest,
+                    color: Some(self.color),
+                    .. Default::default()
+                }
+            )?;
         }
 
         Ok(())
