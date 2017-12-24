@@ -66,13 +66,17 @@ impl Body {
 
         let center = self.pos + Vector2::new(self.pos.x.signum() * self.size / 2.0, self.pos.y.signum() * self.size / 2.0);
 
-        if center.x > screen_x_bounds || center.x < -screen_x_bounds {
-            let normal = Vector2::new(sy, 0.0);
-            self.vel = reflect_vector(self.vel, normal);
-        } else if center.y > screen_y_bounds || center.y < -screen_y_bounds {
-            let normal = Vector2::new(0.0, sx);
-            self.vel = reflect_vector(self.vel, normal);
+        let (nx, ny) = match center {
+            _ if center.x > screen_x_bounds => (-1.0, 0.0),
+            _ if center.x < -screen_x_bounds => (1.0, 0.0),
+            _ if center.y > screen_y_bounds => (0.0, -1.0),
+            _ if center.y < -screen_y_bounds => (0.0, 1.0),
+            _ => (0.0, 0.0)
         };
+        let normal = Vector2::new(nx, ny);
+        if normal.dot(&self.vel) <= 0.0 {
+            self.vel = reflect_vector(self.vel, normal);
+        }
     }
 }
 
