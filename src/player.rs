@@ -13,7 +13,6 @@ use ::{
 use client::proto::{Body, ProtoBody};
 use constant::{
     PLAYER_LIFE,
-    PLAYER_TURN_RATE,
     PLAYER_ACCELERATION,
     PLAYER_DECELERATION,
 };
@@ -68,7 +67,7 @@ impl Player {
             return;
         }
 
-        self.body.rot += dt * PLAYER_TURN_RATE * input.xaxis;
+        self.body.rotate(dt, input.xaxis);
 
         if input.yaxis > 0.0 {
             self.accelerate(dt);
