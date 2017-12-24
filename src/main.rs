@@ -29,6 +29,7 @@ use client::proto::{
     SpawnEntity,
     Entity,
     Body,
+    Input,
 };
 
 mod constant;
@@ -421,6 +422,8 @@ impl EventHandler for MainState {
         _keymod: Mod,
         _repeat: bool
     ) {
+        let mut update = Input::default();
+
         match keycode {
             Keycode::W | Keycode::Up => {
                 self.input.yaxis = 1.0;
@@ -429,10 +432,14 @@ impl EventHandler for MainState {
                 self.input.yaxis = -1.0;
             }
             Keycode::A | Keycode::Left => {
-                self.input.xaxis = -1.0;
+                update.turn = Some(-1);
+                self.player.update_input(&update);
+                self.client.send(Msg::Input(update));
             }
             Keycode::D | Keycode::Right => {
-                self.input.xaxis = 1.0;
+                update.turn = Some(1);
+                self.player.update_input(&update);
+                self.client.send(Msg::Input(update));
             }
             Keycode::Space => {
                 self.input.fire = true;
@@ -451,12 +458,16 @@ impl EventHandler for MainState {
         _keymod: Mod,
         _repeat: bool
     ) {
+        let mut update = Input::default();
+
         match keycode {
             Keycode::W | Keycode::S | Keycode::Up | Keycode::Down => {
                 self.input.yaxis = 0.0;
             }
             Keycode::A | Keycode::D | Keycode::Left | Keycode::Right => {
-                self.input.xaxis = 0.0;
+                update.turn = Some(0);
+                self.player.update_input(&update);
+                self.client.send(Msg::Input(update));
             }
             Keycode::Space => {
                 self.input.fire = false;

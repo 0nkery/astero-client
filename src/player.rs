@@ -10,7 +10,11 @@ use ::{
     Assets,
     InputState,
 };
-use client::proto::{Body, ProtoBody};
+use client::proto::{
+    Body,
+    ProtoBody,
+    Input,
+};
 use constant::{
     PLAYER_LIFE,
     PLAYER_ACCELERATION,
@@ -33,6 +37,7 @@ pub struct Player {
     nickname: String,
     nickname_display: graphics::Text,
     color: graphics::Color,
+    input: Input,
 }
 
 impl Player {
@@ -51,6 +56,7 @@ impl Player {
             nickname,
             nickname_display,
             color,
+            input: Input::default(),
         })
     }
 
@@ -58,8 +64,12 @@ impl Player {
         self.body = Body::new(body);
     }
 
-    pub fn update_body(&mut self, body: &ProtoBody) {
-        self.body.update(body);
+    pub fn update_body(&mut self, update: &ProtoBody) {
+        self.body.update(update);
+    }
+
+    pub fn update_input(&mut self, update: &Input) {
+        self.input.update(&update);
     }
 
     pub fn handle_input(&mut self, input: &InputState, dt: f32) {

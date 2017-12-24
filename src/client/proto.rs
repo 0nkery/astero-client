@@ -17,6 +17,7 @@ pub use super::proto_defs::astero::{
     Body as ProtoBody,
     Entity,
     SimUpdate,
+    Input,
 
     mod_Server,
     Server,
@@ -108,6 +109,19 @@ impl<'a> Into<OtherData> for OtherJoined<'a> {
             id: self.id,
             nickname: self.nickname.to_string(),
             body: self.body,
+        }
+    }
+}
+
+
+impl Input {
+    pub fn update(&mut self, other: &Input) {
+        self.turn = other.turn.or(self.turn);
+    }
+
+    pub fn new<'a>(input: Input) -> Client<'a> {
+        Client {
+            msg: mod_Client::OneOfmsg::input(input)
         }
     }
 }

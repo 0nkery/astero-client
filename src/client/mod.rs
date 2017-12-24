@@ -26,6 +26,7 @@ use client::proto::{
     OtherLeft,
     Spawn,
     SimUpdate,
+    Input,
 };
 
 
@@ -41,6 +42,7 @@ pub enum Msg {
     // client messages
     Join(String),
     Leave,
+    Input(Input),
 
     // server messages
     JoinAck(JoinAck),
@@ -68,6 +70,7 @@ impl Msg {
             Msg::Join(nickname) => Some(Join::new(nickname)),
             Msg::Leave => Some(Leave::new()),
             Msg::Heartbeat => Some(Heartbeat::new()),
+            Msg::Input(input) => Some(Input::new(input)),
 
             _ => None
         };
