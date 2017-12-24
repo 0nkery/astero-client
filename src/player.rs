@@ -95,7 +95,7 @@ impl Player {
             let pos = world_to_screen_coords(
                 screen_w, screen_h, self.body.pos
             );
-            let dest_point = graphics::Point::new(pos.x as f32, pos.y as f32);
+            let dest_point = graphics::Point2::new(pos.x as f32, pos.y as f32);
             let image = assets.player_image();
 
             graphics::draw(ctx, image, dest_point, self.body.rot)?;
@@ -111,7 +111,7 @@ impl Player {
             let old_color = graphics::get_color(ctx);
             graphics::set_color(ctx, self.color)?;
 
-            let nickname_dest = graphics::Point::new(pos.x, pos.y - half_size - 7.0);
+            let nickname_dest = graphics::Point2::new(pos.x, pos.y - half_size - 7.0);
             graphics::draw(ctx, &self.nickname_display, nickname_dest, 0.0)?;
 
             graphics::set_color(ctx, old_color)?;

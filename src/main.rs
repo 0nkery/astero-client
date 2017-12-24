@@ -15,13 +15,12 @@ extern crate quick_protobuf;
 
 use std::collections::HashMap;
 use std::env;
-use std::process;
+use std::path;
 use std::thread;
-use std::time::Duration;
 
 use ggez::conf;
 use ggez::event::*;
-use ggez::{Context, GameResult};
+use ggez::{Context, ContextBuilder, GameResult};
 use ggez::graphics;
 use ggez::timer;
 
@@ -184,8 +183,8 @@ impl MainState {
         let client = client::ClientHandle::start();
         client.send(Msg::Join(nickname));
 
-        let screen_width = ctx.conf.window_width;
-        let screen_height = ctx.conf.window_height;
+        let screen_width = ctx.conf.window_mode.width;
+        let screen_height = ctx.conf.window_mode.height;
 
         let health_bar = health_bar::StaticHealthBar::new(
             (screen_width / 4 + 10) as f32,
@@ -333,8 +332,9 @@ fn print_instructions() {
 
 impl EventHandler for MainState {
 
-    fn update(&mut self, ctx: &mut Context, _dt: Duration) -> GameResult<()> {
-        const DESIRED_FPS: u64 = 60;
+    fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
+        const DESIRED_FPS: u32 = 60;
+
         if !timer::check_update_time(ctx, DESIRED_FPS) {
             return Ok(())
         }
@@ -401,7 +401,7 @@ impl EventHandler for MainState {
             }
         }
 
-         let score_dest = graphics::Point::new(
+         let score_dest = graphics::Point2::new(
              (self.score_display.width() / 2) as f32 + 200.0,
              (self.score_display.height() / 2) as f32 + 10.0
          );
@@ -418,6 +418,7 @@ impl EventHandler for MainState {
 
     fn key_down_event(
         &mut self,
+        ctx: &mut Context,
         keycode: Keycode,
         _keymod: Mod,
         _repeat: bool
@@ -438,13 +439,16 @@ impl EventHandler for MainState {
             Keycode::Space => {
                 self.input.fire = true;
             }
-            Keycode::Escape => process::exit(0),
+            Keycode::Escape => {
+                ctx.quit().expect("Failed to quit the game");
+            },
             _ => (),
         }
     }
 
     fn key_up_event(
         &mut self,
+        _ctx: &mut Context,
         keycode: Keycode,
         _keymod: Mod,
         _repeat: bool
@@ -463,7 +467,7 @@ impl EventHandler for MainState {
         }
     }
 
-    fn quit_event(&mut self) -> bool {
+    fn quit_event(&mut self, _ctx: &mut Context) -> bool {
         self.client.stop();
 
         false
@@ -471,12 +475,15 @@ impl EventHandler for MainState {
 }
 
 fn main() {
-    let mut c = conf::Conf::new();
-    c.window_title = "Astero".to_string();
-    c.window_width = 800;
-    c.window_height = 600;
+    let mut cb = ContextBuilder::new("Astero", "herald-it")
+        .window_setup(conf::WindowSetup::default().title("Astero"))
+        .window_mode(conf::WindowMode::default().dimensions(800, 600));
 
-    let ctx = &mut Context::load_from_conf("astero", "ggez", c).expect("Failed to load configuration");
+    let mut path = path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    path.push("resources");
+    cb = cb.add_resource_path(path);
+
+    let ctx = &mut cb.build().expect("Failed to build game context");
 
     match MainState::new(ctx) {
         Err(e) => {

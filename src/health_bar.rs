@@ -22,13 +22,11 @@ impl StaticHealthBar {
 
     pub fn draw(&self, ctx: &mut Context, cur: f32, max: f32) -> GameResult<()> {
         let old_color = graphics::get_color(ctx);
-        let old_line_width = graphics::get_line_width(ctx);
 
         graphics::set_color(ctx, colors::LIGHT_BLUE)?;
-        graphics::set_line_width(ctx, STATIC_HEALTH_BAR_LINE_WIDTH);
 
         graphics::rectangle(
-            ctx, graphics::DrawMode::Line,
+            ctx, graphics::DrawMode::Line(STATIC_HEALTH_BAR_LINE_WIDTH),
             graphics::Rect::new(self.x, self.y, self.width, self.height)
         )?;
 
@@ -43,7 +41,6 @@ impl StaticHealthBar {
         )?;
 
         graphics::set_color(ctx, old_color)?;
-        graphics::set_line_width(ctx, old_line_width);
 
         Ok(())
     }

@@ -47,7 +47,7 @@ impl Asteroid {
         let (screen_w, screen_h) = world_coords;
         let pos = self.body.pos;
         let pos = world_to_screen_coords(screen_w, screen_h, pos);
-        let dest_point = graphics::Point::new(pos.x as f32, pos.y as f32);
+        let dest_point = graphics::Point2::new(pos.x as f32, pos.y as f32);
         let image = assets.asteroid_image();
         graphics::draw(ctx, image, dest_point, self.body.rot)?;
 

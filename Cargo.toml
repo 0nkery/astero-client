@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Dmitry Shlagoff <richyannet@yandex.ru>"]
 
 [dependencies]
-ggez = "0.3"
+ggez = "0.4.0-rc.2"
 rand = "0.3"
 nalgebra = "0.13"
 futures = "0.1"
