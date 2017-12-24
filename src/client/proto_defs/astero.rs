@@ -18,20 +18,20 @@ use super::*;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Entity {
-    UNKNOWN = 0,
+    UNKNOWN_ENTITY = 0,
     ASTEROID = 1,
 }
 
 impl Default for Entity {
     fn default() -> Self {
-        Entity::UNKNOWN
+        Entity::UNKNOWN_ENTITY
     }
 }
 
 impl From<i32> for Entity {
     fn from(i: i32) -> Self {
         match i {
-            0 => Entity::UNKNOWN,
+            0 => Entity::UNKNOWN_ENTITY,
             1 => Entity::ASTEROID,
             _ => Self::default(),
         }
@@ -472,6 +472,72 @@ impl MessageWrite for SimUpdates {
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
+pub struct Input {
+    pub turn: Option<i32>,
+}
+
+impl<'a> MessageRead<'a> for Input {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(8) => msg.turn = Some(r.read_sint32(bytes)?),
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl MessageWrite for Input {
+    fn get_size(&self) -> usize {
+        0
+        + self.turn.as_ref().map_or(0, |m| 1 + sizeof_sint32(*(m)))
+    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        if let Some(ref s) =self.turn { w.write_with_tag(8, |w| w.write_sint32(*s))?; }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Clone)]
+pub struct OtherInput {
+    pub id: u32,
+    pub input: Input,
+}
+
+impl<'a> MessageRead<'a> for OtherInput {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(8) => msg.id = r.read_uint32(bytes)?,
+                Ok(18) => msg.input = r.read_message::<Input>(bytes)?,
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl MessageWrite for OtherInput {
+    fn get_size(&self) -> usize {
+        0
+        + 1 + sizeof_varint(*(&self.id) as u64)
+        + 1 + sizeof_len((&self.input).get_size())
+    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        w.write_with_tag(8, |w| w.write_uint32(*&self.id))?;
+        w.write_with_tag(18, |w| w.write_message(&self.input))?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct Client<'a> {
     pub msg: mod_Client::OneOfmsg<'a>,
 }
@@ -484,6 +550,7 @@ impl<'a> MessageRead<'a> for Client<'a> {
                 Ok(10) => msg.msg = mod_Client::OneOfmsg::join(r.read_message::<Join>(bytes)?),
                 Ok(18) => msg.msg = mod_Client::OneOfmsg::leave(r.read_message::<Leave>(bytes)?),
                 Ok(26) => msg.msg = mod_Client::OneOfmsg::heartbeat(r.read_message::<Heartbeat>(bytes)?),
+                Ok(34) => msg.msg = mod_Client::OneOfmsg::input(r.read_message::<Input>(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -499,6 +566,7 @@ impl<'a> MessageWrite for Client<'a> {
             mod_Client::OneOfmsg::join(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Client::OneOfmsg::leave(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Client::OneOfmsg::heartbeat(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Client::OneOfmsg::input(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Client::OneOfmsg::None => 0,
     }    }
 
@@ -506,6 +574,7 @@ impl<'a> MessageWrite for Client<'a> {
         match self.msg {            mod_Client::OneOfmsg::join(ref m) => { w.write_with_tag(10, |w| w.write_message(m))? },
             mod_Client::OneOfmsg::leave(ref m) => { w.write_with_tag(18, |w| w.write_message(m))? },
             mod_Client::OneOfmsg::heartbeat(ref m) => { w.write_with_tag(26, |w| w.write_message(m))? },
+            mod_Client::OneOfmsg::input(ref m) => { w.write_with_tag(34, |w| w.write_message(m))? },
             mod_Client::OneOfmsg::None => {},
     }        Ok(())
     }
@@ -520,6 +589,7 @@ pub enum OneOfmsg<'a> {
     join(Join<'a>),
     leave(Leave),
     heartbeat(Heartbeat),
+    input(Input),
     None,
 }
 
@@ -547,6 +617,7 @@ impl<'a> MessageRead<'a> for Server<'a> {
                 Ok(34) => msg.msg = mod_Server::OneOfmsg::heartbeat(r.read_message::<Heartbeat>(bytes)?),
                 Ok(42) => msg.msg = mod_Server::OneOfmsg::spawn(r.read_message::<Spawn>(bytes)?),
                 Ok(50) => msg.msg = mod_Server::OneOfmsg::sim_updates(r.read_message::<SimUpdates>(bytes)?),
+                Ok(58) => msg.msg = mod_Server::OneOfmsg::other_input(r.read_message::<OtherInput>(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -565,6 +636,7 @@ impl<'a> MessageWrite for Server<'a> {
             mod_Server::OneOfmsg::heartbeat(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfmsg::spawn(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfmsg::sim_updates(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Server::OneOfmsg::other_input(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfmsg::None => 0,
     }    }
 
@@ -575,6 +647,7 @@ impl<'a> MessageWrite for Server<'a> {
             mod_Server::OneOfmsg::heartbeat(ref m) => { w.write_with_tag(34, |w| w.write_message(m))? },
             mod_Server::OneOfmsg::spawn(ref m) => { w.write_with_tag(42, |w| w.write_message(m))? },
             mod_Server::OneOfmsg::sim_updates(ref m) => { w.write_with_tag(50, |w| w.write_message(m))? },
+            mod_Server::OneOfmsg::other_input(ref m) => { w.write_with_tag(58, |w| w.write_message(m))? },
             mod_Server::OneOfmsg::None => {},
     }        Ok(())
     }
@@ -592,6 +665,7 @@ pub enum OneOfmsg<'a> {
     heartbeat(Heartbeat),
     spawn(Spawn),
     sim_updates(SimUpdates),
+    other_input(OtherInput),
     None,
 }
 
