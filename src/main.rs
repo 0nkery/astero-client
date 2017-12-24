@@ -16,7 +16,6 @@ extern crate quick_protobuf;
 use std::collections::HashMap;
 use std::env;
 use std::path;
-use std::thread;
 
 use ggez::conf;
 use ggez::event::*;
@@ -335,46 +334,44 @@ impl EventHandler for MainState {
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         const DESIRED_FPS: u32 = 60;
 
-        if !timer::check_update_time(ctx, DESIRED_FPS) {
-            return Ok(())
-        }
+        while timer::check_update_time(ctx, DESIRED_FPS) {
+            if let Ok(msg) = self.client.try_recv() {
+                self.handle_message(ctx, msg)?;
+            }
 
-        if let Ok(msg) = self.client.try_recv() {
-            self.handle_message(ctx, msg)?;
-        }
+            let seconds = 1.0 / (DESIRED_FPS as f32);
 
-        let seconds = 1.0 / (DESIRED_FPS as f32);
+            self.player.handle_input(&self.input, seconds);
+            self.player_shot_timeout -= seconds;
+            if self.input.fire && self.player_shot_timeout < 0.0 {
+                self.fire_player_shot();
+            }
 
-        self.player.handle_input(&self.input, seconds);
-        self.player_shot_timeout -= seconds;
-        if self.input.fire && self.player_shot_timeout < 0.0 {
-            self.fire_player_shot();
-        }
+            self.player.update_position(seconds);
+            self.player.wrap_position(self.screen_width as f32, self.screen_height as f32);
 
-        self.player.update_position(seconds);
-        self.player.wrap_position(self.screen_width as f32, self.screen_height as f32);
+            for shot in &mut self.shots {
+                shot.update_position(seconds);
+                shot.wrap_position(self.screen_width as f32, self.screen_height as f32);
+            }
 
-        for shot in &mut self.shots {
-            shot.update_position(seconds);
-            shot.wrap_position(self.screen_width as f32, self.screen_height as f32);
-        }
+            for (_id, rock) in &mut self.asteroids {
+                rock.update_position(seconds);
+                rock.wrap_position(self.screen_width as f32, self.screen_height as f32);
+            }
 
-        for (_id, rock) in &mut self.asteroids {
-            rock.update_position(seconds);
-            rock.wrap_position(self.screen_width as f32, self.screen_height as f32);
-        }
+            self.handle_collisions();
+            self.clear_dead_stuff();
 
-        self.handle_collisions();
-        self.clear_dead_stuff();
+            if self.gui_dirty {
+                self.update_ui(ctx)?;
+                self.gui_dirty = false;
+            }
 
-        if self.gui_dirty {
-            self.update_ui(ctx)?;
-            self.gui_dirty = false;
-        }
-
-        if self.player.is_dead() {
-            println!("Game over!");
-            ctx.quit()?;
+            if self.player.is_dead() {
+                println!("Game over!");
+                ctx.quit()?;
+            }
         }
 
         Ok(())
@@ -412,7 +409,8 @@ impl EventHandler for MainState {
 
          graphics::present(ctx);
 
-         thread::yield_now();
+         timer::yield_now();
+
          Ok(())
     }
 
