@@ -31,7 +31,6 @@ pub const SHOT_SPEED: f32 = 200.0;
 
 pub const PLAYER_ACCELERATION: f32 = 100.0;
 pub const PLAYER_DECELERATION: f32 = 10.0;
-pub const PLAYER_TURN_RATE: f32 = 2.05;
 pub const PLAYER_SHOT_TIME: f32 = 0.5;
 
 pub const MAX_PHYSICS_VEL: f32 = 250.0;

@@ -13,7 +13,6 @@ use ::{
 use client::proto::{Body, ProtoBody};
 use constant::{
     PLAYER_LIFE,
-    PLAYER_TURN_RATE,
     PLAYER_ACCELERATION,
     PLAYER_DECELERATION,
 };
@@ -68,7 +67,7 @@ impl Player {
             return;
         }
 
-        self.body.rot += dt * PLAYER_TURN_RATE * input.xaxis;
+        self.body.rotate(dt, input.xaxis);
 
         if input.yaxis > 0.0 {
             self.accelerate(dt);
@@ -91,14 +90,18 @@ impl Player {
 
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets, coords: (u32, u32)) -> GameResult<()> {
         if self.is_ready() {
-            let (screen_w, screen_h) = coords;
-            let pos = world_to_screen_coords(
-                screen_w, screen_h, self.body.pos
-            );
-            let dest_point = graphics::Point2::new(pos.x as f32, pos.y as f32);
-            let image = assets.player_image();
+            let (sw, sh) = coords;
+            let pos = world_to_screen_coords(sw, sh, self.body.pos);
 
-            graphics::draw(ctx, image, dest_point, self.body.rot)?;
+            let image = assets.player_image();
+            let params = graphics::DrawParam {
+                dest: pos,
+                rotation: self.body.rot,
+                offset: graphics::Point2::new(0.5, 0.5),
+                .. Default::default()
+            };
+
+            graphics::draw_ex(ctx, image, params)?;
 
             let half_size = self.body.size / 2.0;
 
