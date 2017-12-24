@@ -93,15 +93,16 @@ impl Player {
             let (sw, sh) = coords;
             let pos = world_to_screen_coords(sw, sh, self.body.pos);
 
-            let image = assets.player_image();
-            let params = graphics::DrawParam {
-                dest: pos,
-                rotation: self.body.rot,
-                offset: graphics::Point2::new(0.5, 0.5),
-                .. Default::default()
-            };
-
-            graphics::draw_ex(ctx, image, params)?;
+            graphics::draw_ex(
+                ctx,
+                assets.player_image(),
+                graphics::DrawParam {
+                    dest: pos,
+                    rotation: self.body.rot,
+                    offset: graphics::Point2::new(0.5, 0.5),
+                    .. Default::default()
+                }
+            )?;
 
             let half_size = self.body.size / 2.0;
 
