@@ -70,6 +70,10 @@ impl Player {
     }
 
     fn accelerate(&mut self, dt: f32, direction: i32) {
+        if direction == 0 {
+            return;
+        }
+
         let mut angle = self.body.rot;
         let mut accel_value = PLAYER_ACCELERATION;
         if direction < 0 {
