@@ -6,10 +6,7 @@ use ggez::{
     graphics,
 };
 
-use ::{
-    Assets,
-    InputState,
-};
+use ::Assets;
 use client::proto::{
     Body,
     ProtoBody,
@@ -72,28 +69,17 @@ impl Player {
         self.input.update(&update);
     }
 
-    pub fn handle_input(&mut self, input: &InputState, dt: f32) {
-        if !self.is_ready() {
-            return;
+    fn accelerate(&mut self, dt: f32, direction: i32) {
+        let mut angle = self.body.rot;
+        let mut accel_value = PLAYER_ACCELERATION;
+        if direction < 0 {
+            angle += std::f32::consts::PI;
+            accel_value = PLAYER_DECELERATION;
         }
 
-        if input.yaxis > 0.0 {
-            self.accelerate(dt);
-        } else if input.yaxis < 0.0 {
-            self.decelerate(dt);
-        }
-    }
-
-    fn accelerate(&mut self, dt: f32) {
-        let direction_vector = vec_from_angle(self.body.rot);
-        let acceleration = direction_vector * PLAYER_ACCELERATION;
+        let dir_vec = vec_from_angle(angle);
+        let acceleration = dir_vec * accel_value;
         self.body.vel += acceleration * dt;
-    }
-
-    fn decelerate(&mut self, dt: f32) {
-        let direction_vector = vec_from_angle(self.body.rot + std::f32::consts::PI);
-        let deceleration_vector = direction_vector * PLAYER_DECELERATION;
-        self.body.vel += deceleration_vector * dt;
     }
 
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets, coords: (u32, u32)) -> GameResult<()> {
@@ -179,6 +165,8 @@ impl Destroyable for Player {
 
 impl Movable for Player {
     fn update_position(&mut self, dt: f32) {
+        let acceleration = self.input.accel.unwrap_or(0);
+        self.accelerate(dt, acceleration);
         self.body.rotate(dt, self.input.turn.unwrap_or(0) as f32);
         self.body.update_position(dt);
     }
