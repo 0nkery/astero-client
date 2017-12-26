@@ -265,6 +265,7 @@ impl<'a> MessageWrite for Join<'a> {
 pub struct JoinAck {
     pub id: u32,
     pub body: Body,
+    pub latency: LatencyMeasure,
 }
 
 impl<'a> MessageRead<'a> for JoinAck {
@@ -274,6 +275,7 @@ impl<'a> MessageRead<'a> for JoinAck {
             match r.next_tag(bytes) {
                 Ok(8) => msg.id = r.read_uint32(bytes)?,
                 Ok(18) => msg.body = r.read_message::<Body>(bytes)?,
+                Ok(26) => msg.latency = r.read_message::<LatencyMeasure>(bytes)?,
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -287,11 +289,13 @@ impl MessageWrite for JoinAck {
         0
         + 1 + sizeof_varint(*(&self.id) as u64)
         + 1 + sizeof_len((&self.body).get_size())
+        + 1 + sizeof_len((&self.latency).get_size())
     }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
         w.write_with_tag(8, |w| w.write_uint32(*&self.id))?;
         w.write_with_tag(18, |w| w.write_message(&self.body))?;
+        w.write_with_tag(26, |w| w.write_message(&self.latency))?;
         Ok(())
     }
 }
@@ -389,6 +393,37 @@ impl<'a> MessageRead<'a> for Heartbeat {
 }
 
 impl MessageWrite for Heartbeat { }
+
+#[derive(Debug, Default, PartialEq, Clone)]
+pub struct LatencyMeasure {
+    pub timestamp: u64,
+}
+
+impl<'a> MessageRead<'a> for LatencyMeasure {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(8) => msg.timestamp = r.read_uint64(bytes)?,
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl MessageWrite for LatencyMeasure {
+    fn get_size(&self) -> usize {
+        0
+        + 1 + sizeof_varint(*(&self.timestamp) as u64)
+    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        w.write_with_tag(8, |w| w.write_uint64(*&self.timestamp))?;
+        Ok(())
+    }
+}
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct Spawn {
@@ -557,6 +592,7 @@ impl<'a> MessageRead<'a> for Client<'a> {
                 Ok(18) => msg.msg = mod_Client::OneOfmsg::leave(r.read_message::<Leave>(bytes)?),
                 Ok(26) => msg.msg = mod_Client::OneOfmsg::heartbeat(r.read_message::<Heartbeat>(bytes)?),
                 Ok(34) => msg.msg = mod_Client::OneOfmsg::input(r.read_message::<Input>(bytes)?),
+                Ok(42) => msg.msg = mod_Client::OneOfmsg::latency(r.read_message::<LatencyMeasure>(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -573,6 +609,7 @@ impl<'a> MessageWrite for Client<'a> {
             mod_Client::OneOfmsg::leave(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Client::OneOfmsg::heartbeat(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Client::OneOfmsg::input(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Client::OneOfmsg::latency(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Client::OneOfmsg::None => 0,
     }    }
 
@@ -581,6 +618,7 @@ impl<'a> MessageWrite for Client<'a> {
             mod_Client::OneOfmsg::leave(ref m) => { w.write_with_tag(18, |w| w.write_message(m))? },
             mod_Client::OneOfmsg::heartbeat(ref m) => { w.write_with_tag(26, |w| w.write_message(m))? },
             mod_Client::OneOfmsg::input(ref m) => { w.write_with_tag(34, |w| w.write_message(m))? },
+            mod_Client::OneOfmsg::latency(ref m) => { w.write_with_tag(42, |w| w.write_message(m))? },
             mod_Client::OneOfmsg::None => {},
     }        Ok(())
     }
@@ -596,6 +634,7 @@ pub enum OneOfmsg<'a> {
     leave(Leave),
     heartbeat(Heartbeat),
     input(Input),
+    latency(LatencyMeasure),
     None,
 }
 
