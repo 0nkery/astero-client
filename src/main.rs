@@ -311,9 +311,7 @@ impl MainState {
                         }
 
                         Entity::PLAYER => {
-                            if update.id == self.player_id {
-                                self.player.update_body(&update.body);
-                            } else {
+                            if update.id != self.player_id {
                                 self.others
                                     .entry(update.id)
                                     .and_modify(|p| p.update_body(&update.body));
