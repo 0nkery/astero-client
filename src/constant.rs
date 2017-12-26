@@ -29,7 +29,7 @@ pub const ROCK_LIFE: f32 = 2.0;
 
 pub const SHOT_SPEED: f32 = 200.0;
 
-pub const PLAYER_ACCELERATION: f32 = 100.0;
+pub const PLAYER_ACCELERATION: f32 = 60.0;
 pub const PLAYER_DECELERATION: f32 = 10.0;
 pub const PLAYER_SHOT_TIME: f32 = 0.5;
 
