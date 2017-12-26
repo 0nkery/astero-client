@@ -122,7 +122,6 @@ impl Assets {
 
 #[derive(Debug)]
 pub struct InputState {
-    yaxis: f32,
     fire: bool,
 }
 
@@ -130,7 +129,6 @@ impl Default for InputState {
     fn default() -> Self {
         InputState {
             fire: false,
-            yaxis: 0.0,
         }
     }
 }
@@ -353,7 +351,6 @@ impl EventHandler for MainState {
         while timer::check_update_time(ctx, DESIRED_FPS) {
             let seconds = 1.0 / (DESIRED_FPS as f32);
 
-            self.player.handle_input(&self.input, seconds);
             self.player_shot_timeout -= seconds;
             if self.input.fire && self.player_shot_timeout < 0.0 {
                 self.fire_player_shot();
@@ -445,30 +442,39 @@ impl EventHandler for MainState {
     ) {
         let mut update = Input::default();
 
-        match keycode {
+        let update = match keycode {
             Keycode::W | Keycode::Up => {
-                self.input.yaxis = 1.0;
+                update.accel = Some(1);
+                Some(update)
             }
             Keycode::S | Keycode::Down => {
-                self.input.yaxis = -1.0;
+                update.accel = Some(-1);
+                Some(update)
             }
             Keycode::A | Keycode::Left => {
                 update.turn = Some(-1);
-                self.player.update_input(&update);
-                self.client.send(Msg::Input(update));
+                Some(update)
             }
             Keycode::D | Keycode::Right => {
                 update.turn = Some(1);
-                self.player.update_input(&update);
-                self.client.send(Msg::Input(update));
+                Some(update)
             }
             Keycode::Space => {
                 self.input.fire = true;
+
+                None
             }
             Keycode::Escape => {
                 ctx.quit().expect("Failed to quit the game");
+
+                None
             },
-            _ => (),
+            _ => None,
+        };
+
+        if let Some(update) = update {
+            self.player.update_input(&update);
+            self.client.send(Msg::Input(update));
         }
     }
 
@@ -481,19 +487,26 @@ impl EventHandler for MainState {
     ) {
         let mut update = Input::default();
 
-        match keycode {
+        let update = match keycode {
             Keycode::W | Keycode::S | Keycode::Up | Keycode::Down => {
-                self.input.yaxis = 0.0;
+                update.accel = Some(0);
+                Some(update)
             }
             Keycode::A | Keycode::D | Keycode::Left | Keycode::Right => {
                 update.turn = Some(0);
-                self.player.update_input(&update);
-                self.client.send(Msg::Input(update));
+                Some(update)
             }
             Keycode::Space => {
                 self.input.fire = false;
+
+                None
             }
-            _ => (),
+            _ => None,
+        };
+
+        if let Some(update) = update {
+            self.player.update_input(&update);
+            self.client.send(Msg::Input(update));
         }
     }
 
