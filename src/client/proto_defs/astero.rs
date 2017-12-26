@@ -476,6 +476,7 @@ impl MessageWrite for SimUpdates {
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct Input {
     pub turn: Option<i32>,
+    pub accel: Option<i32>,
 }
 
 impl<'a> MessageRead<'a> for Input {
@@ -484,6 +485,7 @@ impl<'a> MessageRead<'a> for Input {
         while !r.is_eof() {
             match r.next_tag(bytes) {
                 Ok(8) => msg.turn = Some(r.read_sint32(bytes)?),
+                Ok(16) => msg.accel = Some(r.read_sint32(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -496,10 +498,12 @@ impl MessageWrite for Input {
     fn get_size(&self) -> usize {
         0
         + self.turn.as_ref().map_or(0, |m| 1 + sizeof_sint32(*(m)))
+        + self.accel.as_ref().map_or(0, |m| 1 + sizeof_sint32(*(m)))
     }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
         if let Some(ref s) =self.turn { w.write_with_tag(8, |w| w.write_sint32(*s))?; }
+        if let Some(ref s) =self.accel { w.write_with_tag(16, |w| w.write_sint32(*s))?; }
         Ok(())
     }
 }
