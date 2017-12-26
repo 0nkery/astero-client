@@ -264,6 +264,8 @@ impl MainState {
                 println!("Connected to server. Conn ID - {}", ack.id);
                 self.player.set_body(ack.body);
                 self.player_id = ack.id;
+
+                self.client.send(Msg::Latency(ack.latency));
             }
             Msg::OtherJoined(other) => {
                 println!(

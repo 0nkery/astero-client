@@ -18,6 +18,7 @@ pub use super::proto_defs::astero::{
     Entity,
     SimUpdate,
     Input,
+    LatencyMeasure,
 
     mod_Server,
     Server,
@@ -65,6 +66,15 @@ impl Heartbeat {
 
         Client {
             msg: mod_Client::OneOfmsg::heartbeat(heartbeat)
+        }
+    }
+}
+
+
+impl LatencyMeasure {
+    pub fn new<'a>(latency: LatencyMeasure) -> Client<'a> {
+        Client {
+            msg: mod_Client::OneOfmsg::latency(latency)
         }
     }
 }

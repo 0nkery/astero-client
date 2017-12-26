@@ -28,6 +28,7 @@ use client::proto::{
     SimUpdate,
     Input,
     OtherInput,
+    LatencyMeasure,
 };
 
 
@@ -44,6 +45,7 @@ pub enum Msg {
     Join(String),
     Leave,
     Input(Input),
+    Latency(LatencyMeasure),
 
     // server messages
     JoinAck(JoinAck),
@@ -73,6 +75,7 @@ impl Msg {
             Msg::Leave => Some(Leave::new()),
             Msg::Heartbeat => Some(Heartbeat::new()),
             Msg::Input(input) => Some(Input::new(input)),
+            Msg::Latency(latency) => Some(LatencyMeasure::new(latency)),
 
             _ => None
         };
