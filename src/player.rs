@@ -65,8 +65,8 @@ impl Player {
         self.body.update(update);
     }
 
-    pub fn update_input(&mut self, update: &Input) {
-        self.input.update(&update);
+    pub fn update_input(&mut self, update: &Input) -> bool {
+        self.input.update(&update)
     }
 
     fn accelerate(&mut self, dt: f32, direction: i32) {

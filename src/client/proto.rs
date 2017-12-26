@@ -126,9 +126,19 @@ impl<'a> Into<OtherData> for OtherJoined<'a> {
 
 
 impl Input {
-    pub fn update(&mut self, other: &Input) {
-        self.turn = other.turn.or(self.turn);
-        self.accel = other.accel.or(self.accel);
+    pub fn update(&mut self, other: &Input) -> bool {
+        let new_turn = other.turn.or(self.turn);
+        let new_accel = other.accel.or(self.accel);
+
+        let updated = new_turn != self.turn || new_accel != self.accel;
+
+        if updated {
+            self.turn = new_turn;
+            self.accel = new_accel;
+            return true;
+        }
+
+        false
     }
 
     pub fn new<'a>(input: Input) -> Client<'a> {

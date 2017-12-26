@@ -327,7 +327,7 @@ impl MainState {
             Msg::OtherInput(other) => {
                 self.others
                     .get_mut(&other.id)
-                    .map_or((),|o| o.update_input(&other.input));
+                    .map_or(true,|o| o.update_input(&other.input));
             }
             _ => {}
         }
@@ -475,8 +475,9 @@ impl EventHandler for MainState {
         };
 
         if let Some(update) = update {
-            self.player.update_input(&update);
-            self.client.send(Msg::Input(update));
+            if self.player.update_input(&update) {
+                self.client.send(Msg::Input(update));
+            }
         }
     }
 
@@ -507,8 +508,9 @@ impl EventHandler for MainState {
         };
 
         if let Some(update) = update {
-            self.player.update_input(&update);
-            self.client.send(Msg::Input(update));
+            if self.player.update_input(&update) {
+                self.client.send(Msg::Input(update));
+            }
         }
     }
 
