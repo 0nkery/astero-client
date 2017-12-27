@@ -24,8 +24,21 @@ impl BodyError {
     }
 
     pub fn reduce(&mut self) {
-        self.pos_error *= 0.9;
         self.rot_error *= 0.9;
+        if self.rot_error < 0.00001 {
+            self.rot_error = 0.0;
+        }
+        if self.pos_error.x > 3.0 {
+            self.pos_error.x *= 0.85;
+        } else {
+            self.pos_error.x *= 0.95;
+        }
+
+        if self.pos_error.y > 3.0 {
+            self.pos_error.y *= 0.85;
+        } else {
+            self.pos_error.y *= 0.95;
+        }
     }
 }
 
