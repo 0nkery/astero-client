@@ -192,6 +192,75 @@ impl MessageWrite for Asteroids {
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
+pub struct Shot {
+    pub body: Body,
+    pub ttl: f32,
+}
+
+impl<'a> MessageRead<'a> for Shot {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(10) => msg.body = r.read_message::<Body>(bytes)?,
+                Ok(21) => msg.ttl = r.read_float(bytes)?,
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl MessageWrite for Shot {
+    fn get_size(&self) -> usize {
+        0
+        + 1 + sizeof_len((&self.body).get_size())
+        + 1 + 4
+    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        w.write_with_tag(10, |w| w.write_message(&self.body))?;
+        w.write_with_tag(21, |w| w.write_float(*&self.ttl))?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Clone)]
+pub struct Shots {
+    pub entities: HashMap<u32, Shot>,
+}
+
+impl<'a> MessageRead<'a> for Shots {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(10) => {
+                    let (key, value) = r.read_map(bytes, |r, bytes| r.read_uint32(bytes), |r, bytes| r.read_message::<Shot>(bytes))?;
+                    msg.entities.insert(key, value);
+                }
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl MessageWrite for Shots {
+    fn get_size(&self) -> usize {
+        0
+        + self.entities.iter().map(|(k, v)| 1 + sizeof_len(2 + sizeof_varint(*(k) as u64) + sizeof_len((v).get_size()))).sum::<usize>()
+    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        for (k, v) in self.entities.iter() { w.write_with_tag(10, |w| w.write_map(2 + sizeof_varint(*(k) as u64) + sizeof_len((v).get_size()), 8, |w| w.write_uint32(*k), 18, |w| w.write_message(v)))?; }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct SimUpdate {
     pub entity: Entity,
     pub id: u32,
@@ -436,6 +505,7 @@ impl<'a> MessageRead<'a> for Spawn {
         while !r.is_eof() {
             match r.next_tag(bytes) {
                 Ok(10) => msg.entity = mod_Spawn::OneOfentity::asteroids(r.read_message::<Asteroids>(bytes)?),
+                Ok(18) => msg.entity = mod_Spawn::OneOfentity::shots(r.read_message::<Shots>(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -449,11 +519,13 @@ impl MessageWrite for Spawn {
         0
         + match self.entity {
             mod_Spawn::OneOfentity::asteroids(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Spawn::OneOfentity::shots(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Spawn::OneOfentity::None => 0,
     }    }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
         match self.entity {            mod_Spawn::OneOfentity::asteroids(ref m) => { w.write_with_tag(10, |w| w.write_message(m))? },
+            mod_Spawn::OneOfentity::shots(ref m) => { w.write_with_tag(18, |w| w.write_message(m))? },
             mod_Spawn::OneOfentity::None => {},
     }        Ok(())
     }
@@ -466,6 +538,7 @@ use super::*;
 #[derive(Debug, PartialEq, Clone)]
 pub enum OneOfentity {
     asteroids(Asteroids),
+    shots(Shots),
     None,
 }
 
@@ -512,6 +585,7 @@ impl MessageWrite for SimUpdates {
 pub struct Input {
     pub turn: Option<i32>,
     pub accel: Option<i32>,
+    pub fire: Option<bool>,
 }
 
 impl<'a> MessageRead<'a> for Input {
@@ -521,6 +595,7 @@ impl<'a> MessageRead<'a> for Input {
             match r.next_tag(bytes) {
                 Ok(8) => msg.turn = Some(r.read_sint32(bytes)?),
                 Ok(16) => msg.accel = Some(r.read_sint32(bytes)?),
+                Ok(24) => msg.fire = Some(r.read_bool(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -534,11 +609,13 @@ impl MessageWrite for Input {
         0
         + self.turn.as_ref().map_or(0, |m| 1 + sizeof_sint32(*(m)))
         + self.accel.as_ref().map_or(0, |m| 1 + sizeof_sint32(*(m)))
+        + self.fire.as_ref().map_or(0, |m| 1 + sizeof_varint(*(m) as u64))
     }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
         if let Some(ref s) =self.turn { w.write_with_tag(8, |w| w.write_sint32(*s))?; }
         if let Some(ref s) =self.accel { w.write_with_tag(16, |w| w.write_sint32(*s))?; }
+        if let Some(ref s) =self.fire { w.write_with_tag(24, |w| w.write_bool(*s))?; }
         Ok(())
     }
 }
