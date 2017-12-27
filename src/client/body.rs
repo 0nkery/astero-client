@@ -111,21 +111,18 @@ impl Body {
         self.rot += self.rvel * dt * direction;
     }
 
-    pub fn wrap_position(&mut self, sx: f32, sy: f32) {
+    pub fn wrap_position(&mut self, xb: f32, yb: f32) {
         if self.size <= 0.0 {
             return;
         }
 
-        let screen_x_bounds = sx / 2.0;
-        let screen_y_bounds = sy / 2.0;
-
         let center = self.pos + Vector2::new(self.pos.x.signum() * self.size / 2.0, self.pos.y.signum() * self.size / 2.0);
 
         let (nx, ny) = match center {
-            _ if center.x > screen_x_bounds => (-1.0, 0.0),
-            _ if center.x < -screen_x_bounds => (1.0, 0.0),
-            _ if center.y > screen_y_bounds => (0.0, -1.0),
-            _ if center.y < -screen_y_bounds => (0.0, 1.0),
+            _ if center.x > xb => (-1.0, 0.0),
+            _ if center.x < -xb => (1.0, 0.0),
+            _ if center.y > yb => (0.0, -1.0),
+            _ if center.y < -yb => (0.0, 1.0),
             _ => (0.0, 0.0)
         };
         let normal = Vector2::new(nx, ny);

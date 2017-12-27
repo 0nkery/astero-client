@@ -362,21 +362,23 @@ impl EventHandler for MainState {
             }
 
             self.player.update_position(seconds);
-            self.player.wrap_position(self.screen_width as f32, self.screen_height as f32);
+            let x_bound = self.screen_width as f32 / 2.0;
+            let y_bound = self.screen_height as f32 / 2.0;
+            self.player.wrap_position(x_bound, y_bound);
 
             for (_id, player) in &mut self.others {
                 player.update_position(seconds);
-                player.wrap_position(self.screen_width as f32, self.screen_height as f32);
+                player.wrap_position(x_bound, y_bound);
             }
 
             for shot in &mut self.shots {
                 shot.update_position(seconds);
-                shot.wrap_position(self.screen_width as f32, self.screen_height as f32);
+                shot.wrap_position(x_bound, y_bound);
             }
 
             for (_id, rock) in &mut self.asteroids {
                 rock.update_position(seconds);
-                rock.wrap_position(self.screen_width as f32, self.screen_height as f32);
+                rock.wrap_position(x_bound, y_bound);
             }
 
             self.handle_collisions();
