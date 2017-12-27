@@ -24,14 +24,10 @@ pub mod colors {
 }
 
 pub const PLAYER_LIFE: f32 = 3.0;
-pub const SHOT_LIFE: f32 = 2.0;
 pub const ROCK_LIFE: f32 = 2.0;
-
-pub const SHOT_SPEED: f32 = 200.0;
 
 pub const PLAYER_ACCELERATION: f32 = 60.0;
 pub const PLAYER_DECELERATION: f32 = 10.0;
-pub const PLAYER_SHOT_TIME: f32 = 0.5;
 
 pub const MAX_PHYSICS_VEL: f32 = 250.0;
 

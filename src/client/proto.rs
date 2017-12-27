@@ -22,6 +22,7 @@ pub use client::proto_defs::astero::{
     SimUpdate,
     Input,
     LatencyMeasure,
+    Shot as ProtoShot,
 
     mod_Server,
     Server,
@@ -132,7 +133,7 @@ impl Input {
     pub fn update(&mut self, other: &Input) -> bool {
         let new_turn = other.turn.or(self.turn);
         let new_accel = other.accel.or(self.accel);
-        let fire = other.fire.or(self.fire);
+        let new_fire = other.fire.or(self.fire);
 
         let updated =
             new_turn != self.turn ||

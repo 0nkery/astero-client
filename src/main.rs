@@ -33,7 +33,6 @@ use client::proto::{
 };
 
 mod constant;
-use constant::PLAYER_SHOT_TIME;
 use constant::gui::HEALTH_BAR_SIZE;
 
 mod health_bar;
@@ -136,7 +135,7 @@ impl Default for InputState {
 struct MainState {
     player_id: u32,
     player: Player,
-    shots: Vec<Shot>,
+    shots: HashMap<u32, Shot>,
     asteroids: HashMap<u32, Asteroid>,
     score: i32,
     others: HashMap<u32, Player>,
@@ -144,9 +143,6 @@ struct MainState {
     assets: Assets,
     screen_width: u32,
     screen_height: u32,
-
-    input: InputState,
-    player_shot_timeout: f32,
 
     gui_dirty: bool,
     score_display: graphics::Text,
@@ -192,7 +188,7 @@ impl MainState {
         let s = MainState {
             player_id: 0,
             player,
-            shots: Vec::new(),
+            shots: HashMap::new(),
             asteroids: HashMap::new(),
             score: 0,
             others: HashMap::new(),
@@ -200,9 +196,6 @@ impl MainState {
             assets,
             screen_width,
             screen_height,
-
-            input: InputState::default(),
-            player_shot_timeout: 0.0,
 
             gui_dirty: true,
             score_display,
@@ -214,18 +207,8 @@ impl MainState {
         Ok(s)
     }
 
-    fn fire_player_shot(&mut self) {
-        if !self.player.is_ready() {
-            return;
-        }
-
-        self.player_shot_timeout = PLAYER_SHOT_TIME;
-        let shot = self.player.fire();
-        self.shots.push(shot);
-    }
-
     fn clear_dead_stuff(&mut self) {
-        self.shots.retain(|s| s.is_alive());
+        self.shots.retain(|_, s| s.is_alive());
         self.asteroids.retain(|_, r| r.is_alive());
     }
 
@@ -238,7 +221,7 @@ impl MainState {
                 continue;
             }
 
-            for shot in &mut self.shots {
+            for (_, shot) in &mut self.shots {
                 if shot.collided(rock) {
                     shot.destroy();
                     rock.damage(1.0);
@@ -294,6 +277,10 @@ impl MainState {
                     SpawnEntity::asteroids(asteroids) => {
                         self.asteroids.extend(asteroids.entities.into_iter()
                             .map(|(id, a)| (id, Asteroid::new(a))));
+                    }
+                    SpawnEntity::shots(shots) => {
+                        self.shots.extend(shots.entities.into_iter()
+                            .map(|(id, s)| (id, Shot::new(s))));
                     }
 
                     SpawnEntity::None => {}
@@ -355,15 +342,10 @@ impl EventHandler for MainState {
 
         while timer::check_update_time(ctx, DESIRED_FPS) {
             let seconds = 1.0 / (DESIRED_FPS as f32);
-
-            self.player_shot_timeout -= seconds;
-            if self.input.fire && self.player_shot_timeout < 0.0 {
-                self.fire_player_shot();
-            }
-
-            self.player.update_position(seconds);
             let x_bound = self.screen_width as f32 / 2.0;
             let y_bound = self.screen_height as f32 / 2.0;
+
+            self.player.update_position(seconds);
             self.player.wrap_position(x_bound, y_bound);
 
             for (_id, player) in &mut self.others {
@@ -371,7 +353,7 @@ impl EventHandler for MainState {
                 player.wrap_position(x_bound, y_bound);
             }
 
-            for shot in &mut self.shots {
+            for (_, shot) in &mut self.shots {
                 shot.update_position(seconds);
                 shot.wrap_position(x_bound, y_bound);
             }
@@ -411,7 +393,7 @@ impl EventHandler for MainState {
 
             self.player.draw(ctx, &mut self.assets, coords)?;
 
-            for shot in &self.shots {
+            for (_, shot) in &self.shots {
                 shot.draw(ctx, &mut self.assets, coords)?;
             }
 

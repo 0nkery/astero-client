@@ -1,20 +1,15 @@
 use ggez::{
     graphics,
-    graphics::Point2,
     Context,
     GameResult,
 };
 
 use ::Assets;
-use constant::{
-    SHOT_LIFE,
-    SHOT_SPEED,
+use client::proto::{
+    Body,
+    ProtoShot,
 };
-use client::proto::Body;
-use util::{
-    vec_from_angle,
-    world_to_screen_coords,
-};
+use util::world_to_screen_coords;
 
 use ::Movable;
 use ::Destroyable;
@@ -26,28 +21,11 @@ pub struct Shot {
 }
 
 impl Shot {
-    pub fn new() -> Self {
-        let mut body = Body::default();
-        body.size = 6.0;
-
+    pub fn new(shot: ProtoShot) -> Self {
         Shot {
-            body,
-            ttl: SHOT_LIFE,
+            body: Body::new(shot.body),
+            ttl: shot.ttl,
         }
-    }
-
-    pub fn with_coord(mut self, pos: Point2) -> Self {
-        self.body.pos = pos;
-
-        self
-    }
-
-    pub fn with_rot(mut self, rot: f32) -> Self {
-        self.body.rot = rot;
-        let direction = vec_from_angle(rot);
-        self.body.vel = direction * SHOT_SPEED;
-
-        self
     }
 
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets, world_coords: (u32, u32)) -> GameResult<()> {

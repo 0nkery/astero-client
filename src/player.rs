@@ -18,7 +18,6 @@ use constant::{
     PLAYER_ACCELERATION,
     PLAYER_DECELERATION,
 };
-use shot::Shot;
 use health_bar::StickyHealthBar;
 use util::{
     vec_from_angle,
@@ -138,12 +137,6 @@ impl Player {
         }
 
         Ok(())
-    }
-
-    pub fn fire(&self) -> Shot {
-        Shot::new()
-            .with_coord(self.body.pos)
-            .with_rot(self.body.rot)
     }
 
     pub fn is_ready(&self) -> bool {
