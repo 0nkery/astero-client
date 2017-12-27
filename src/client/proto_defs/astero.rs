@@ -663,6 +663,7 @@ impl<'a> MessageRead<'a> for Server<'a> {
                 Ok(42) => msg.msg = mod_Server::OneOfmsg::spawn(r.read_message::<Spawn>(bytes)?),
                 Ok(50) => msg.msg = mod_Server::OneOfmsg::sim_updates(r.read_message::<SimUpdates>(bytes)?),
                 Ok(58) => msg.msg = mod_Server::OneOfmsg::other_input(r.read_message::<OtherInput>(bytes)?),
+                Ok(66) => msg.msg = mod_Server::OneOfmsg::latency(r.read_message::<LatencyMeasure>(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -682,6 +683,7 @@ impl<'a> MessageWrite for Server<'a> {
             mod_Server::OneOfmsg::spawn(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfmsg::sim_updates(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfmsg::other_input(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Server::OneOfmsg::latency(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfmsg::None => 0,
     }    }
 
@@ -693,6 +695,7 @@ impl<'a> MessageWrite for Server<'a> {
             mod_Server::OneOfmsg::spawn(ref m) => { w.write_with_tag(42, |w| w.write_message(m))? },
             mod_Server::OneOfmsg::sim_updates(ref m) => { w.write_with_tag(50, |w| w.write_message(m))? },
             mod_Server::OneOfmsg::other_input(ref m) => { w.write_with_tag(58, |w| w.write_message(m))? },
+            mod_Server::OneOfmsg::latency(ref m) => { w.write_with_tag(66, |w| w.write_message(m))? },
             mod_Server::OneOfmsg::None => {},
     }        Ok(())
     }
@@ -711,6 +714,7 @@ pub enum OneOfmsg<'a> {
     spawn(Spawn),
     sim_updates(SimUpdates),
     other_input(OtherInput),
+    latency(LatencyMeasure),
     None,
 }
 
