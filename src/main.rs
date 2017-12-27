@@ -329,6 +329,9 @@ impl MainState {
                     .get_mut(&other.id)
                     .map_or(true,|o| o.update_input(&other.input));
             }
+            Msg::Latency(latency) => {
+                self.client.send(Msg::Latency(latency));
+            }
             _ => {}
         }
 

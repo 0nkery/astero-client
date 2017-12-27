@@ -102,6 +102,7 @@ impl<'a> From<Server<'a>> for Msg {
             mod_Server::OneOfmsg::spawn(spawn) => Msg::Spawn(spawn),
             mod_Server::OneOfmsg::sim_updates(list_of) => Msg::SimUpdates(list_of.updates),
             mod_Server::OneOfmsg::other_input(input) => Msg::OtherInput(input),
+            mod_Server::OneOfmsg::latency(latency) => Msg::Latency(latency),
 
             mod_Server::OneOfmsg::None => Msg::Unknown,
         }
