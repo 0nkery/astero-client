@@ -73,9 +73,7 @@ impl Movable for Shot {
         self.body.update_position(dt);
     }
 
-    fn wrap_position(&mut self, sx: f32, sy: f32) {
-        self.body.wrap_position(sx, sy);
-    }
+    fn wrap_position(&mut self, _xb: f32, _yb: f32) {}
 
     fn get_body(&self) -> &Body {
         &self.body
