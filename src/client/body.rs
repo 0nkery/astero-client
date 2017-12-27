@@ -11,6 +11,35 @@ use super::proto_defs::astero::{
 
 
 #[derive(Debug)]
+pub struct BodyError {
+    pub pos_error: Point2,
+    pub rot_error: f32,
+}
+
+impl BodyError {
+    pub fn add(&mut self, other: BodyError) {
+        self.pos_error.x += other.pos_error.x;
+        self.pos_error.y += other.pos_error.y;
+        self.rot_error += other.rot_error;
+    }
+
+    pub fn reduce(&mut self) {
+        self.pos_error *= 0.9;
+        self.rot_error *= 0.9;
+    }
+}
+
+impl Default for BodyError {
+    fn default() -> Self {
+        BodyError {
+            pos_error: Point2::origin(),
+            rot_error: 0.0,
+        }
+    }
+}
+
+
+#[derive(Debug)]
 pub struct Body {
     pub pos: Point2,
     pub vel: Vector2,
@@ -30,12 +59,25 @@ impl Body {
         }
     }
 
-    pub fn update(&mut self, body: &ProtoBody) {
-        self.pos = body.pos.into();
+    pub fn update(&mut self, body: &ProtoBody) -> BodyError {
+        let mut error = BodyError::default();
+
+        let new_pos: Point2 = body.pos.into();
+        error.pos_error.x = self.pos.x - new_pos.x;
+        error.pos_error.y = self.pos.y - new_pos.y;
+
+        self.pos = new_pos;
+
         self.vel = body.vel.into();
-        self.rot = body.rot.unwrap_or(self.rot);
         self.rvel = body.rvel.unwrap_or(self.rvel);
         self.size = body.size.unwrap_or(self.size);
+
+        if let Some(new_rot) = body.rot {
+            error.rot_error = self.rot - new_rot;
+            self.rot = new_rot;
+        }
+
+        error
     }
 
     pub fn update_position(&mut self, dt: f32) {

@@ -11,6 +11,7 @@ use client::proto::{
     Body,
     ProtoBody,
     Input,
+    BodyError,
 };
 use constant::{
     PLAYER_LIFE,
@@ -35,6 +36,7 @@ pub struct Player {
     nickname_display: graphics::Text,
     color: graphics::Color,
     input: Input,
+    body_error: BodyError,
 }
 
 impl Player {
@@ -54,6 +56,7 @@ impl Player {
             nickname_display,
             color,
             input: Input::default(),
+            body_error: BodyError::default(),
         })
     }
 
@@ -62,7 +65,8 @@ impl Player {
     }
 
     pub fn update_body(&mut self, update: &ProtoBody) {
-        self.body.update(update);
+        let error = self.body.update(update);
+        self.body_error.add(error);
     }
 
     pub fn update_input(&mut self, update: &Input) -> bool {
@@ -89,7 +93,11 @@ impl Player {
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets, coords: (u32, u32)) -> GameResult<()> {
         if self.is_ready() {
             let (sw, sh) = coords;
-            let pos = world_to_screen_coords(sw, sh, self.body.pos);
+            let pos = graphics::Point2::new(
+                self.body.pos.x + self.body_error.pos_error.x,
+                self.body.pos.y + self.body_error.pos_error.y
+            );
+            let pos = world_to_screen_coords(sw, sh, pos);
 
             let image = assets.player_image();
 
@@ -98,7 +106,7 @@ impl Player {
                 image,
                 graphics::DrawParam {
                     dest: pos,
-                    rotation: self.body.rot,
+                    rotation: self.body.rot + self.body_error.rot_error,
                     offset: graphics::Point2::new(0.5, 0.5),
                     scale: graphics::Point2::new(
                         self.body.size / image.width() as f32,
@@ -173,6 +181,8 @@ impl Movable for Player {
         self.accelerate(dt, acceleration);
         self.body.rotate(dt, self.input.turn.unwrap_or(0) as f32);
         self.body.update_position(dt);
+
+        self.body_error.reduce();
     }
 
     fn wrap_position(&mut self, sx: f32, sy: f32) {

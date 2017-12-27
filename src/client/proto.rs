@@ -2,9 +2,12 @@ use std::borrow::Cow;
 
 use ggez::graphics::{Point2, Vector2};
 
-pub use super::body::Body;
+pub use client::body::{
+    Body,
+    BodyError,
+};
 
-pub use super::proto_defs::astero::{
+pub use client::proto_defs::astero::{
     Client,
     mod_Client,
 

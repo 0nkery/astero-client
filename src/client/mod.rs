@@ -214,12 +214,12 @@ impl ClientHandle {
         self.send(Msg::Leave);
 
         // Dropping `to` causes Sink-part of UdpFramed to flush all pending packets and exit.
-        let sender = self.to.take().unwrap();
+        let sender = self.to.take().expect("Failed to flush all pending packets");
         drop(sender);
 
         self.thread_handle
             .take()
-            .unwrap()
+            .expect("Absent thread handle?! What?")
             .join()
             .expect("Failed to stop client thread");
     }
