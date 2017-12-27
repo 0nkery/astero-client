@@ -467,9 +467,8 @@ impl EventHandler for MainState {
                 Some(update)
             }
             Keycode::Space => {
-                self.input.fire = true;
-
-                None
+                update.fire = Some(true);
+                Some(update)
             }
             Keycode::Escape => {
                 ctx.quit().expect("Failed to quit the game");
@@ -505,9 +504,8 @@ impl EventHandler for MainState {
                 Some(update)
             }
             Keycode::Space => {
-                self.input.fire = false;
-
-                None
+                update.fire = Some(false);
+                Some(update)
             }
             _ => None,
         };

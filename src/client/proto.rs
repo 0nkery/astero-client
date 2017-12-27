@@ -132,12 +132,17 @@ impl Input {
     pub fn update(&mut self, other: &Input) -> bool {
         let new_turn = other.turn.or(self.turn);
         let new_accel = other.accel.or(self.accel);
+        let fire = other.fire.or(self.fire);
 
-        let updated = new_turn != self.turn || new_accel != self.accel;
+        let updated =
+            new_turn != self.turn ||
+            new_accel != self.accel ||
+            new_fire != self.fire;
 
         if updated {
             self.turn = new_turn;
             self.accel = new_accel;
+            self.fire = new_fire;
             return true;
         }
 
