@@ -229,9 +229,10 @@ impl ClientHandle {
     pub fn send(&self, msg: Msg) {
         self.to
             .as_ref()
-            .expect("Absent to-client queue?! What?")
-            .unbounded_send(msg)
-            .expect("Failed to drop message to client thread");
+            .and_then(|s| {
+                s.unbounded_send(msg).expect("Failed to send message to client thread");
+                Some(())
+            });
     }
 
     pub fn try_recv(&mut self) -> Result<Msg, std_mpsc::TryRecvError> {
@@ -253,6 +254,10 @@ impl ClientHandle {
                 match msg {
                     Msg::Heartbeat => {
                         self.send(Msg::Heartbeat);
+                        self.try_recv()
+                    }
+                    Msg::Latency(latency) => {
+                        self.send(Msg::Latency(latency));
                         self.try_recv()
                     }
 
