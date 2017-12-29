@@ -502,7 +502,7 @@ impl EventHandler for MainState {
         }
     }
 
-    fn quit_event(&mut self, _ctx: &mut Context) -> bool {git
+    fn quit_event(&mut self, _ctx: &mut Context) -> bool {
         self.client.stop();
 
         false
