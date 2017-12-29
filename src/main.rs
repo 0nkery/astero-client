@@ -363,8 +363,13 @@ impl EventHandler for MainState {
 
             self.handle_collisions();
 
-            if let Ok(msg) = self.client.try_recv() {
+            let mut handled_messages = 0;
+            while let Ok(msg) = self.client.try_recv() {
                 self.handle_message(ctx, msg)?;
+                handled_messages += 1;
+                if handled_messages >= 3 {
+                    break;
+                }
             }
 
             self.clear_dead_stuff();
@@ -497,7 +502,7 @@ impl EventHandler for MainState {
         }
     }
 
-    fn quit_event(&mut self, _ctx: &mut Context) -> bool {
+    fn quit_event(&mut self, _ctx: &mut Context) -> bool {git
         self.client.stop();
 
         false

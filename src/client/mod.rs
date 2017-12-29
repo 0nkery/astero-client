@@ -103,6 +103,7 @@ impl<'a> From<Server<'a>> for Msg {
             mod_Server::OneOfmsg::sim_updates(list_of) => Msg::SimUpdates(list_of.updates),
             mod_Server::OneOfmsg::other_input(input) => Msg::OtherInput(input),
             mod_Server::OneOfmsg::latency(latency) => Msg::Latency(latency),
+            mod_Server::OneOfmsg::gameplay_events(..) => Msg::Unknown,
 
             mod_Server::OneOfmsg::None => Msg::Unknown,
         }
@@ -226,7 +227,10 @@ impl ClientHandle {
     }
 
     pub fn send(&self, msg: Msg) {
-        self.to.as_ref().unwrap().unbounded_send(msg)
+        self.to
+            .as_ref()
+            .expect("Absent to-client queue?! What?")
+            .unbounded_send(msg)
             .expect("Failed to drop message to client thread");
     }
 
