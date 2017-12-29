@@ -300,6 +300,97 @@ impl MessageWrite for SimUpdate {
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
+pub struct EntityLifeUpdate {
+    pub entity: Entity,
+    pub id: u32,
+    pub life: f32,
+}
+
+impl<'a> MessageRead<'a> for EntityLifeUpdate {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(8) => msg.entity = r.read_enum(bytes)?,
+                Ok(16) => msg.id = r.read_uint32(bytes)?,
+                Ok(29) => msg.life = r.read_float(bytes)?,
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl MessageWrite for EntityLifeUpdate {
+    fn get_size(&self) -> usize {
+        0
+        + 1 + sizeof_varint(*(&self.entity) as u64)
+        + 1 + sizeof_varint(*(&self.id) as u64)
+        + 1 + 4
+    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        w.write_with_tag(8, |w| w.write_enum(*&self.entity as i32))?;
+        w.write_with_tag(16, |w| w.write_uint32(*&self.id))?;
+        w.write_with_tag(29, |w| w.write_float(*&self.life))?;
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Clone)]
+pub struct GameplayEvent {
+    pub event: mod_GameplayEvent::OneOfevent,
+}
+
+impl<'a> MessageRead<'a> for GameplayEvent {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(10) => msg.event = mod_GameplayEvent::OneOfevent::life_update(r.read_message::<EntityLifeUpdate>(bytes)?),
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl MessageWrite for GameplayEvent {
+    fn get_size(&self) -> usize {
+        0
+        + match self.event {
+            mod_GameplayEvent::OneOfevent::life_update(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_GameplayEvent::OneOfevent::None => 0,
+    }    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        match self.event {            mod_GameplayEvent::OneOfevent::life_update(ref m) => { w.write_with_tag(10, |w| w.write_message(m))? },
+            mod_GameplayEvent::OneOfevent::None => {},
+    }        Ok(())
+    }
+}
+
+pub mod mod_GameplayEvent {
+
+use super::*;
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum OneOfevent {
+    life_update(EntityLifeUpdate),
+    None,
+}
+
+impl Default for OneOfevent {
+    fn default() -> Self {
+        OneOfevent::None
+    }
+}
+
+}
+
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct Join<'a> {
     pub nickname: Cow<'a, str>,
 }
@@ -334,7 +425,6 @@ impl<'a> MessageWrite for Join<'a> {
 pub struct JoinAck {
     pub id: u32,
     pub body: Body,
-    pub latency: LatencyMeasure,
 }
 
 impl<'a> MessageRead<'a> for JoinAck {
@@ -344,7 +434,6 @@ impl<'a> MessageRead<'a> for JoinAck {
             match r.next_tag(bytes) {
                 Ok(8) => msg.id = r.read_uint32(bytes)?,
                 Ok(18) => msg.body = r.read_message::<Body>(bytes)?,
-                Ok(26) => msg.latency = r.read_message::<LatencyMeasure>(bytes)?,
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -358,13 +447,11 @@ impl MessageWrite for JoinAck {
         0
         + 1 + sizeof_varint(*(&self.id) as u64)
         + 1 + sizeof_len((&self.body).get_size())
-        + 1 + sizeof_len((&self.latency).get_size())
     }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
         w.write_with_tag(8, |w| w.write_uint32(*&self.id))?;
         w.write_with_tag(18, |w| w.write_message(&self.body))?;
-        w.write_with_tag(26, |w| w.write_message(&self.latency))?;
         Ok(())
     }
 }
@@ -656,6 +743,37 @@ impl MessageWrite for OtherInput {
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
+pub struct GameplayEvents {
+    pub events: Vec<GameplayEvent>,
+}
+
+impl<'a> MessageRead<'a> for GameplayEvents {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(10) => msg.events.push(r.read_message::<GameplayEvent>(bytes)?),
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl MessageWrite for GameplayEvents {
+    fn get_size(&self) -> usize {
+        0
+        + self.events.iter().map(|s| 1 + sizeof_len((s).get_size())).sum::<usize>()
+    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        for s in &self.events { w.write_with_tag(10, |w| w.write_message(s))?; }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct Client<'a> {
     pub msg: mod_Client::OneOfmsg<'a>,
 }
@@ -741,6 +859,7 @@ impl<'a> MessageRead<'a> for Server<'a> {
                 Ok(50) => msg.msg = mod_Server::OneOfmsg::sim_updates(r.read_message::<SimUpdates>(bytes)?),
                 Ok(58) => msg.msg = mod_Server::OneOfmsg::other_input(r.read_message::<OtherInput>(bytes)?),
                 Ok(66) => msg.msg = mod_Server::OneOfmsg::latency(r.read_message::<LatencyMeasure>(bytes)?),
+                Ok(74) => msg.msg = mod_Server::OneOfmsg::gameplay_events(r.read_message::<GameplayEvents>(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -761,6 +880,7 @@ impl<'a> MessageWrite for Server<'a> {
             mod_Server::OneOfmsg::sim_updates(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfmsg::other_input(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfmsg::latency(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Server::OneOfmsg::gameplay_events(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfmsg::None => 0,
     }    }
 
@@ -773,6 +893,7 @@ impl<'a> MessageWrite for Server<'a> {
             mod_Server::OneOfmsg::sim_updates(ref m) => { w.write_with_tag(50, |w| w.write_message(m))? },
             mod_Server::OneOfmsg::other_input(ref m) => { w.write_with_tag(58, |w| w.write_message(m))? },
             mod_Server::OneOfmsg::latency(ref m) => { w.write_with_tag(66, |w| w.write_message(m))? },
+            mod_Server::OneOfmsg::gameplay_events(ref m) => { w.write_with_tag(74, |w| w.write_message(m))? },
             mod_Server::OneOfmsg::None => {},
     }        Ok(())
     }
@@ -792,6 +913,7 @@ pub enum OneOfmsg<'a> {
     sim_updates(SimUpdates),
     other_input(OtherInput),
     latency(LatencyMeasure),
+    gameplay_events(GameplayEvents),
     None,
 }
 
