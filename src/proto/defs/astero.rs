@@ -390,6 +390,37 @@ impl<'a> Default for OneOfEntity<'a> {
 }
 
 #[derive(Debug, Default, PartialEq, Clone)]
+pub struct ManyUpdates<'a> {
+    pub updates: Vec<Update<'a>>,
+}
+
+impl<'a> MessageRead<'a> for ManyUpdates<'a> {
+    fn from_reader(r: &mut BytesReader, bytes: &'a [u8]) -> Result<Self> {
+        let mut msg = Self::default();
+        while !r.is_eof() {
+            match r.next_tag(bytes) {
+                Ok(10) => msg.updates.push(r.read_message::<Update>(bytes)?),
+                Ok(t) => { r.read_unknown(bytes, t)?; }
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(msg)
+    }
+}
+
+impl<'a> MessageWrite for ManyUpdates<'a> {
+    fn get_size(&self) -> usize {
+        0
+        + self.updates.iter().map(|s| 1 + sizeof_len((s).get_size())).sum::<usize>()
+    }
+
+    fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
+        for s in &self.updates { w.write_with_tag(10, |w| w.write_message(s))?; }
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct JoinPayload<'a> {
     pub nickname: Cow<'a, str>,
 }
@@ -523,7 +554,7 @@ impl<'a> MessageRead<'a> for Server<'a> {
             match r.next_tag(bytes) {
                 Ok(10) => msg.Msg = mod_Server::OneOfMsg::create(r.read_message::<Create>(bytes)?),
                 Ok(18) => msg.Msg = mod_Server::OneOfMsg::destroy(r.read_message::<Destroy>(bytes)?),
-                Ok(26) => msg.Msg = mod_Server::OneOfMsg::update(r.read_message::<Update>(bytes)?),
+                Ok(26) => msg.Msg = mod_Server::OneOfMsg::updates(r.read_message::<ManyUpdates>(bytes)?),
                 Ok(t) => { r.read_unknown(bytes, t)?; }
                 Err(e) => return Err(e),
             }
@@ -538,14 +569,14 @@ impl<'a> MessageWrite for Server<'a> {
         + match self.Msg {
             mod_Server::OneOfMsg::create(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfMsg::destroy(ref m) => 1 + sizeof_len((m).get_size()),
-            mod_Server::OneOfMsg::update(ref m) => 1 + sizeof_len((m).get_size()),
+            mod_Server::OneOfMsg::updates(ref m) => 1 + sizeof_len((m).get_size()),
             mod_Server::OneOfMsg::None => 0,
     }    }
 
     fn write_message<W: Write>(&self, w: &mut Writer<W>) -> Result<()> {
         match self.Msg {            mod_Server::OneOfMsg::create(ref m) => { w.write_with_tag(10, |w| w.write_message(m))? },
             mod_Server::OneOfMsg::destroy(ref m) => { w.write_with_tag(18, |w| w.write_message(m))? },
-            mod_Server::OneOfMsg::update(ref m) => { w.write_with_tag(26, |w| w.write_message(m))? },
+            mod_Server::OneOfMsg::updates(ref m) => { w.write_with_tag(26, |w| w.write_message(m))? },
             mod_Server::OneOfMsg::None => {},
     }        Ok(())
     }
@@ -559,7 +590,7 @@ use super::*;
 pub enum OneOfMsg<'a> {
     create(Create<'a>),
     destroy(Destroy),
-    update(Update<'a>),
+    updates(ManyUpdates<'a>),
     None,
 }
 
