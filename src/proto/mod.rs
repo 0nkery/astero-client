@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use ggez::graphics::{Point2, Vector2};
 
-pub use client::body::{
+pub use super::body::{
     Body,
     BodyError,
 };
@@ -137,8 +137,8 @@ impl Input {
 
         let updated =
             new_turn != self.turn ||
-            new_accel != self.accel ||
-            new_fire != self.fire;
+                new_accel != self.accel ||
+                new_fire != self.fire;
 
         if updated {
             self.turn = new_turn;

@@ -47,6 +47,7 @@ mod shot;
 use shot::Shot;
 
 mod util;
+mod proto;
 
 
 trait Movable {
