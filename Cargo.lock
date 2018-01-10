@@ -67,7 +67,7 @@ dependencies = [
 name = "astero-client"
 version = "0.1.0"
 dependencies = [
- "clippy 0.0.178 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clippy 0.0.179 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
  "ggez 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "quick-protobuf 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -195,17 +195,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "clippy"
-version = "0.0.178"
+version = "0.0.179"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cargo_metadata 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
- "clippy_lints 0.0.178 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clippy_lints 0.0.179 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "clippy_lints"
-version = "0.0.178"
+version = "0.0.179"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "if_chain 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1468,8 +1468,8 @@ dependencies = [
 "checksum cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d4c819a1287eb618df47cc647173c5c4c66ba19d888a6e50d605672aed3140de"
 "checksum cgmath 0.14.1 (registry+https://github.com/rust-lang/crates.io-index)" = "87f025a17ad3f30d49015c787903976d5f9cd6115ece1eb7f4d6ffe06b8c4080"
 "checksum claxon 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "84d1237389598ada39533a0015b2d04a9e21cae771c1ab9327fb87520c9e84c7"
-"checksum clippy 0.0.178 (registry+https://github.com/rust-lang/crates.io-index)" = "bd0b13e3745dd5adc3896e0596b9a35154026eeb9d1b4a8ebf16fb005a9e116c"
-"checksum clippy_lints 0.0.178 (registry+https://github.com/rust-lang/crates.io-index)" = "0745c557f4d810f660458a04109ec94833f5b1c7691951dfbfdaa72975f95ee2"
+"checksum clippy 0.0.179 (registry+https://github.com/rust-lang/crates.io-index)" = "f3865be451fd0a4f53376171c2e86e52ef6dfa2d51e8d137229851b332f5ab12"
+"checksum clippy_lints 0.0.179 (registry+https://github.com/rust-lang/crates.io-index)" = "78002b9b809798e082008d1a90d63b1053243b0b03ded66bb4d661a6248be896"
 "checksum coco 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "c06169f5beb7e31c7c67ebf5540b8b472d23e3eade3b2ec7d1f5b504a85f91bd"
 "checksum color_quant 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a475fc4af42d83d28adf72968d9bcfaf035a1a9381642d8e85d8a04957767b0d"
 "checksum coreaudio-rs 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "22ec432725379967f9014b481afcb7c07a4fb154d836d3711730972ea91675ea"
