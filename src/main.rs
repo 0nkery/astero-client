@@ -25,12 +25,6 @@ use ggez::timer;
 
 mod client;
 use client::Msg;
-use client::proto::{
-    SpawnEntity,
-    Entity,
-    Body,
-    Input,
-};
 
 mod constant;
 use constant::gui::HEALTH_BAR_SIZE;

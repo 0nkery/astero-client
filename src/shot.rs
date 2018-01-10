@@ -5,11 +5,8 @@ use ggez::{
 };
 
 use ::Assets;
-use client::proto::{
-    Body,
-    ProtoShot,
-};
 use util::world_to_screen_coords;
+use proto;
 
 use ::Movable;
 use ::Destroyable;

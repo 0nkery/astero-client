@@ -1,7 +1,3 @@
-mod defs;
-pub mod proto;
-mod body;
-
 use std::io;
 use std::iter::repeat;
 use std::net::{SocketAddr, SocketAddrV6, Ipv6Addr, IpAddr};
@@ -15,21 +11,7 @@ use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::{Core, Timeout};
 use quick_protobuf::{Writer, BytesReader, MessageWrite, MessageRead};
 
-use client::proto::{
-    Join,
-    Leave,
-    Heartbeat,
-    JoinAck,
-    mod_Server,
-    Server,
-    OtherData,
-    OtherLeft,
-    Spawn,
-    SimUpdate,
-    Input,
-    OtherInput,
-    LatencyMeasure,
-};
+use proto;
 
 
 #[derive(Debug)]

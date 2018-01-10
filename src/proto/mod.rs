@@ -1,43 +1,9 @@
+mod defs;
+
+
 use std::borrow::Cow;
 
 use ggez::graphics::{Point2, Vector2};
-
-pub use super::body::{
-    Body,
-    BodyError,
-};
-
-pub use super::defs::astero::{
-    Client,
-    mod_Client,
-
-    Join,
-    Leave,
-    Heartbeat,
-
-    Coord,
-    Asteroid,
-    Body as ProtoBody,
-    Entity,
-    SimUpdate,
-    Input,
-    LatencyMeasure,
-    Shot as ProtoShot,
-
-    mod_Server,
-    Server,
-
-    JoinAck,
-    OtherLeft,
-    Spawn,
-    mod_Spawn::OneOfentity as SpawnEntity,
-    SimUpdates,
-    OtherInput,
-};
-
-use super::defs::astero::{
-    OtherJoined,
-};
 
 
 impl<'a> Join<'a> {

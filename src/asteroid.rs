@@ -1,14 +1,10 @@
 use ggez::{Context, graphics, GameResult};
 
-use client::proto::{
-    Body,
-    ProtoBody,
-    Asteroid as ProtoAsteroid,
-};
 
 use health_bar;
 use constant::ROCK_LIFE;
 use util::world_to_screen_coords;
+use proto;
 
 use ::Movable;
 

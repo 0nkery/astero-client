@@ -7,12 +7,6 @@ use ggez::{
 };
 
 use ::Assets;
-use client::proto::{
-    Body,
-    ProtoBody,
-    Input,
-    BodyError,
-};
 use constant::{
     PLAYER_LIFE,
     PLAYER_ACCELERATION,
@@ -23,6 +17,7 @@ use util::{
     vec_from_angle,
     world_to_screen_coords,
 };
+use proto;
 
 use ::Movable;
 use ::Destroyable;
