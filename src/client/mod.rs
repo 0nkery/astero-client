@@ -241,8 +241,8 @@ impl ClientHandle {
 
             Ok(Msg::ServerNotResponding) => {
                 self.timeouts += 1;
-                println!("Got ServerNotResponding. Timeouts - {}", self.timeouts);
                 if self.timeouts >= 3 {
+                    println!("Server is not responding...");
                     return Ok(Msg::ServerNotResponding);
                 }
 
