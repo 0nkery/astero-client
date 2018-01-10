@@ -5,8 +5,9 @@ use ggez::{
 };
 
 use ::Assets;
+use body::Body;
 use util::world_to_screen_coords;
-use proto;
+use proto::astero;
 
 use ::Movable;
 use ::Destroyable;
@@ -18,7 +19,7 @@ pub struct Shot {
 }
 
 impl Shot {
-    pub fn new(shot: ProtoShot) -> Self {
+    pub fn new(shot: astero::Shot) -> Self {
         Shot {
             body: Body::new(shot.body),
             ttl: shot.ttl,

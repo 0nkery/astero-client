@@ -31,6 +31,9 @@ use constant::gui::HEALTH_BAR_SIZE;
 
 mod health_bar;
 
+mod body;
+use body::Body;
+
 mod player;
 use player::Player;
 
@@ -41,7 +44,14 @@ mod shot;
 use shot::Shot;
 
 mod util;
+
 mod proto;
+use proto::{
+    AsteroServerMsg,
+    AsteroCreateEntity,
+    astero::Entity,
+    astero::Input,
+};
 
 
 trait Movable {
@@ -116,12 +126,16 @@ impl Assets {
 
 #[derive(Debug)]
 pub struct InputState {
+    turn: i32,
+    accel: i32,
     fire: bool,
 }
 
 impl Default for InputState {
     fn default() -> Self {
         InputState {
+            turn: 0,
+            accel: 0,
             fire: false,
         }
     }
@@ -134,6 +148,8 @@ struct MainState {
     asteroids: HashMap<u32, Asteroid>,
     score: i32,
     others: HashMap<u32, Player>,
+
+    input: InputState,
 
     assets: Assets,
     screen_width: u32,
@@ -188,6 +204,8 @@ impl MainState {
             score: 0,
             others: HashMap::new(),
 
+            input: InputState::default(),
+
             assets,
             screen_width,
             screen_height,
@@ -236,14 +254,15 @@ impl MainState {
         Ok(())
     }
 
-    fn handle_message(&mut self, ctx: &mut Context, msg: Msg) -> GameResult<()> {
-        match msg {
-            Msg::JoinAck(ack) => {
-                println!("Connected to server. Conn ID - {}", ack.id);
-                self.player.set_body(ack.body);
-                self.player_id = ack.id;
-            }
-            Msg::OtherJoined(other) => {
+    fn init_player(&mut self, this: proto::astero::Player) {
+        println!("Connected to server. Conn ID - {}", this.id);
+        self.player_id = this.id;
+        self.player.set_body(this.body);
+    }
+
+    fn create_entity(&mut self, ctx: &mut Context, entity: AsteroCreateEntity) {
+        match entity {
+            AsteroCreateEntity::player(other) => {
                 println!(
                     "Player connected. ID - {}, nickname - {}, coord - ({}, {})",
                     other.id, other.nickname, other.body.pos.x, other.body.pos.y
@@ -255,30 +274,45 @@ impl MainState {
                 player.set_body(other.body);
                 self.others.insert(other.id, player);
             }
-            Msg::OtherLeft(other) => {
-                let player = self.others.remove(&other.id);
+            AsteroCreateEntity::asteroid(asteroid) => {
+                self.asteroids.insert(asteroid.id, asteroid);
+            }
+            AsteroCreateEntity::shot(shot) => {
+                self.shots.insert(shot.id, shot);
+                self.shots.insert(shot.id, shot);
+            }
+        }
+    }
+
+    fn destroy_entity(&mut self, entity: proto::astero::Destroy) {
+        match entity.entity {
+            Entity::UNKNOWN_ENTITY => {},
+            Entity::PLAYER => {
+                let player = self.others.remove(&entity.id);
                 if let Some(player) = player {
-                    println!("Player disconnected. ID - {}, nickname - {}", other.id, player.nickname());
+                    println!("Player disconnected. ID - {}, nickname - {}", entity.id, player.nickname());
                 }
             }
+        }
+    }
+
+    fn handle_message(&mut self, ctx: &mut Context, msg: Msg) -> GameResult<()> {
+        match msg {
+            Msg::JoinAck(this_player) => self.init_player(this_player),
+            Msg::FromServer(msg) => {
+                match msg {
+                    AsteroServerMsg::create(entity) => self.create_entity(entity),
+                    AsteroServerMsg::destroy(entity) => self.destroy_entity(entity),
+                }
+            }
+
             Msg::ServerNotResponding => {
                 println!("Server is not available! Closing game...");
                 ctx.quit()?;
             }
-            Msg::Spawn(spawn) => {
-                match spawn.entity {
-                    SpawnEntity::asteroids(asteroids) => {
-                        self.asteroids.extend(asteroids.entities.into_iter()
-                            .map(|(id, a)| (id, Asteroid::new(a))));
-                    }
-                    SpawnEntity::shots(shots) => {
-                        self.shots.extend(shots.entities.into_iter()
-                            .map(|(id, s)| (id, Shot::new(s))));
-                    }
+        }
 
-                    SpawnEntity::None => {}
-                }
-            }
+        match msg {
             Msg::SimUpdates(updates) => {
                 for update in updates {
                     match update.entity {

@@ -7,6 +7,7 @@ use ggez::{
 };
 
 use ::Assets;
+use body::Body;
 use constant::{
     PLAYER_LIFE,
     PLAYER_ACCELERATION,
@@ -17,7 +18,7 @@ use util::{
     vec_from_angle,
     world_to_screen_coords,
 };
-use proto;
+use proto::astero;
 
 use ::Movable;
 use ::Destroyable;
@@ -29,8 +30,6 @@ pub struct Player {
     nickname: String,
     nickname_display: graphics::Text,
     color: graphics::Color,
-    input: Input,
-    body_error: BodyError,
 }
 
 impl Player {
@@ -49,22 +48,15 @@ impl Player {
             nickname,
             nickname_display,
             color,
-            input: Input::default(),
-            body_error: BodyError::default(),
         })
     }
 
-    pub fn set_body(&mut self, body: ProtoBody) {
+    pub fn set_body(&mut self, body: astero::Body) {
         self.body = Body::new(body);
     }
 
-    pub fn update_body(&mut self, update: &ProtoBody) {
+    pub fn update_body(&mut self, update: &astero::Body) {
         let error = self.body.update(update);
-        self.body_error.add(error);
-    }
-
-    pub fn update_input(&mut self, update: &Input) -> bool {
-        self.input.update(&update)
     }
 
     fn accelerate(&mut self, dt: f32, direction: i32) {
