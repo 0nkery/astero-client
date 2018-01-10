@@ -8,4 +8,4 @@ cd -
 
 cd proto/
 git pull origin master
-pb-rs -s -d ../src/client/proto_defs ./*.proto
+pb-rs -s -d ../src/client/defs ./*.proto

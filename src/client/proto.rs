@@ -7,7 +7,7 @@ pub use client::body::{
     BodyError,
 };
 
-pub use client::proto_defs::astero::{
+pub use super::defs::astero::{
     Client,
     mod_Client,
 
@@ -35,7 +35,7 @@ pub use client::proto_defs::astero::{
     OtherInput,
 };
 
-use super::proto_defs::astero::{
+use super::defs::astero::{
     OtherJoined,
 };
 

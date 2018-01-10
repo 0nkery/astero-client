@@ -5,7 +5,7 @@ use util::reflect_vector;
 
 use constant::MAX_PHYSICS_VEL;
 
-use super::proto_defs::astero::{
+use super::defs::astero::{
     Body as ProtoBody,
 };
 

@@ -1,4 +1,4 @@
-mod proto_defs;
+mod defs;
 pub mod proto;
 mod body;
 
