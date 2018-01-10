@@ -12,3 +12,12 @@ pub use self::mmob::mod_Client::OneOfMsg as MmobClientMsg;
 pub use self::mmob::mod_Server::OneOfMsg as MmobServerMsg;
 
 
+impl From<astero::Input> for astero::Client {
+    fn from(input: astero::Input) -> Self {
+        astero::Client {
+            Msg: AsteroClientMsg::input(input)
+        }
+    }
+}
+
+

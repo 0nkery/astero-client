@@ -1,10 +1,11 @@
 use std::borrow::Cow;
 use std::io;
 use std::iter::repeat;
+use std::marker::PhantomData;
 use std::net::{SocketAddr, SocketAddrV6, Ipv6Addr, IpAddr};
-use std::thread;
-use std::time::Duration;
 use std::sync::mpsc as std_mpsc;
+use std::time::Duration;
+use std::thread;
 
 use futures::{Stream, Sink, Future, stream};
 use futures::sync::mpsc as futures_mpsc;
@@ -19,29 +20,33 @@ use proto::MmobClientMsg;
 
 
 #[derive(Debug)]
-pub enum Msg {
+pub enum Msg<'a> {
     // helper messages (for internal game client usage)
     Unknown,
     ServerNotResponding,
 
     JoinGame(String),
-    JoinAck(astero::Player),
+    JoinAck(astero::Player<'a>),
     LeaveGame,
     Heartbeat,
     Latency(mmob::LatencyMeasure),
 
     ToServer(astero::Client),
-    FromServer(AsteroServerMsg),
+    FromServer(AsteroServerMsg<'a>),
 }
 
-impl Msg {
+impl<'a> Msg<'a> {
     pub fn from_bytes(buf: &[u8]) -> io::Result<Self> {
         let mut rdr = BytesReader::from_bytes(buf);
         let msg = mmob::Server::from_reader(&mut rdr, &buf);
 
         let msg = match msg {
             Err(..) => Msg::Unknown,
-            Ok(msg) => msg.into(),
+            Ok(msg) => {
+                match msg {
+
+                }
+            },
         };
 
         Ok(msg)
@@ -49,25 +54,27 @@ impl Msg {
 }
 
 
-struct ClientCodec {
+struct ClientCodec<'a> {
     server: SocketAddr,
     buf: Vec<u8>,
+    phantom: PhantomData<&'a ()>,
 }
 
-impl ClientCodec {
+impl<'a> ClientCodec<'a> {
     pub fn new() -> Self {
         let server = SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::localhost(), 11111, 0, 0));
 
         ClientCodec {
             server,
             buf: Vec::new(),
+            phantom: PhantomData {}
         }
     }
 }
 
-impl UdpCodec for ClientCodec {
-    type In = Msg;
-    type Out = Msg;
+impl<'a> UdpCodec for ClientCodec<'a> {
+    type In = Msg<'a>;
+    type Out = Msg<'a>;
 
     fn decode(&mut self, src: &SocketAddr, buf: &[u8]) -> io::Result<Self::In> {
         if *src != self.server {
@@ -88,7 +95,7 @@ impl UdpCodec for ClientCodec {
                     .expect("Failed to write JoinPayload");
 
                 MmobClientMsg::join(mmob::JoinGame {
-                    payload: Some(self.buf),
+                    payload: Some(Cow::from(self.buf)),
                 })
             }
             Msg::LeaveGame => MmobClientMsg::leave(mmob::LeaveGame {}),
@@ -99,7 +106,7 @@ impl UdpCodec for ClientCodec {
         let msg = mmob::Client { Msg: msg };
         let mut writer = Writer::new(buf);
         msg.write_message(&mut writer)
-            .expect("Failed to encode message - {:?}", msg);
+            .expect("Failed to encode message");
 
         self.buf.clear();
 
@@ -108,14 +115,14 @@ impl UdpCodec for ClientCodec {
 }
 
 
-pub struct ClientHandle {
+pub struct ClientHandle<'a> {
     thread_handle: Option<thread::JoinHandle<()>>,
-    to: Option<futures_mpsc::UnboundedSender<Msg>>,
-    from: std_mpsc::Receiver<Msg>,
+    to: Option<futures_mpsc::UnboundedSender<Msg<'a>>>,
+    from: std_mpsc::Receiver<Msg<'a>>,
     timeouts: u32,
 }
 
-impl ClientHandle {
+impl<'a> ClientHandle<'a> {
     pub fn start() -> Self {
         let (to_main_thread, from_client) = std_mpsc::channel();
         let (to_client, from_main_thread) = futures_mpsc::unbounded();
@@ -176,7 +183,7 @@ impl ClientHandle {
     }
 
     pub fn stop(&mut self) {
-        self.send(Msg::Leave);
+        self.send(Msg::LeaveGame);
 
         // Dropping `to` causes Sink-part of UdpFramed to flush all pending packets and exit.
         let sender = self.to.take().expect("Failed to flush all pending packets");
@@ -189,7 +196,7 @@ impl ClientHandle {
             .expect("Failed to stop client thread");
     }
 
-    pub fn send(&self, msg: Msg) {
+    pub fn send(&self, msg: Msg<'a>) {
         self.to
             .as_ref()
             .and_then(|s| {

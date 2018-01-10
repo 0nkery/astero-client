@@ -32,7 +32,7 @@ impl Asteroid {
     pub fn new(inner: astero::Asteroid) -> Self {
         Asteroid {
             body: Body::new(inner.body),
-            life: inner.life,
+            life: inner.life.unwrap_or(0.0),
         }
     }
 

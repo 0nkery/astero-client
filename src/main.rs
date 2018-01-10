@@ -49,6 +49,7 @@ mod proto;
 use proto::{
     AsteroServerMsg,
     AsteroCreateEntity,
+    AsteroUpdateEntity,
     astero::Entity,
     astero::Input,
 };
@@ -141,13 +142,38 @@ impl Default for InputState {
     }
 }
 
-struct MainState {
+impl InputState {
+    fn update(&mut self, update: &Input) -> bool {
+        let new_turn = update.turn.unwrap_or(self.turn);
+        let new_accel = update.accel.unwrap_or(self.accel);
+        let new_fire = update.fire.unwrap_or(self.fire);
+
+        let updated =
+            new_turn != self.turn
+            || new_accel != self.accel
+            || new_fire != self.fire;
+
+        if updated {
+            self.turn = new_turn;
+            self.accel = new_accel;
+            self.fire = new_fire;
+
+            return true;
+        }
+
+        false
+    }
+}
+
+struct MainState<'a> {
     player_id: u32,
     player: Player,
-    shots: HashMap<u32, Shot>,
     asteroids: HashMap<u32, Asteroid>,
     score: i32,
     others: HashMap<u32, Player>,
+
+    shots: Vec<Shot>,
+    unconfirmed_shots: HashMap<u32, Shot>,
 
     input: InputState,
 
@@ -159,10 +185,10 @@ struct MainState {
     score_display: graphics::Text,
     health_bar: health_bar::StaticHealthBar,
 
-    client: client::ClientHandle,
+    client: client::ClientHandle<'a>,
 }
 
-impl MainState {
+impl<'a> MainState<'a> {
     fn new(ctx: &mut Context) -> GameResult<Self> {
         graphics::set_background_color(ctx, (0, 0, 0, 255).into());
 
@@ -184,7 +210,7 @@ impl MainState {
         let player = Player::new(ctx, nickname.clone(), &assets.small_font, constant::colors::GREEN)?;
 
         let client = client::ClientHandle::start();
-        client.send(Msg::Join(nickname));
+        client.send(Msg::JoinGame(nickname));
 
         let screen_width = ctx.conf.window_mode.width;
         let screen_height = ctx.conf.window_mode.height;
@@ -199,10 +225,12 @@ impl MainState {
         let s = MainState {
             player_id: 0,
             player,
-            shots: HashMap::new(),
             asteroids: HashMap::new(),
             score: 0,
             others: HashMap::new(),
+
+            shots: Vec::new(),
+            unconfirmed_shots: HashMap::new(),
 
             input: InputState::default(),
 
@@ -221,7 +249,7 @@ impl MainState {
     }
 
     fn clear_dead_stuff(&mut self) {
-        self.shots.retain(|_, s| s.is_alive());
+        self.shots.retain(| s| s.is_alive());
         self.asteroids.retain(|_, r| r.is_alive());
     }
 
@@ -234,7 +262,7 @@ impl MainState {
                 continue;
             }
 
-            for (_, shot) in &mut self.shots {
+            for shot in &mut self.shots {
                 if shot.collided(rock) {
                     shot.destroy();
                     rock.damage(1.0);
@@ -260,28 +288,28 @@ impl MainState {
         self.player.set_body(this.body);
     }
 
-    fn create_entity(&mut self, ctx: &mut Context, entity: AsteroCreateEntity) {
+    fn create_entity(&mut self, ctx: &mut Context, entity: AsteroCreateEntity) -> GameResult<()> {
         match entity {
             AsteroCreateEntity::player(other) => {
-                println!(
-                    "Player connected. ID - {}, nickname - {}, coord - ({}, {})",
-                    other.id, other.nickname, other.body.pos.x, other.body.pos.y
-                );
+                let nickname = other.nickname
+                    .expect("Missing nickname on remote player")
+                    .into_owned();
 
                 let mut player = Player::new(
-                    ctx, other.nickname, &self.assets.small_font, constant::colors::RED
+                    ctx, nickname, &self.assets.small_font, constant::colors::RED
                 )?;
                 player.set_body(other.body);
                 self.others.insert(other.id, player);
             }
             AsteroCreateEntity::asteroid(asteroid) => {
-                self.asteroids.insert(asteroid.id, asteroid);
+                self.asteroids.insert(asteroid.id, Asteroid::new(asteroid));
             }
             AsteroCreateEntity::shot(shot) => {
-                self.shots.insert(shot.id, shot);
-                self.shots.insert(shot.id, shot);
+                self.shots.push(Shot::new(shot));
             }
         }
+
+        Ok(())
     }
 
     fn destroy_entity(&mut self, entity: proto::astero::Destroy) {
@@ -296,13 +324,33 @@ impl MainState {
         }
     }
 
+    fn update_entity(&mut self, entity: AsteroUpdateEntity) {
+        match entity {
+            AsteroUpdateEntity::player(player) => {
+                self.others
+                    .entry(player.id)
+                    .and_modify(|p| p.update_body(&player.body));
+            }
+            AsteroUpdateEntity::asteroid(asteroid) => {
+                self.asteroids
+                    .entry(asteroid.id)
+                    .and_modify(|a| a.update_body(&asteroid.body));
+            }
+        }
+    }
+
     fn handle_message(&mut self, ctx: &mut Context, msg: Msg) -> GameResult<()> {
         match msg {
             Msg::JoinAck(this_player) => self.init_player(this_player),
             Msg::FromServer(msg) => {
                 match msg {
-                    AsteroServerMsg::create(entity) => self.create_entity(entity),
+                    AsteroServerMsg::create(create) => self.create_entity(ctx, create.Entity)?,
                     AsteroServerMsg::destroy(entity) => self.destroy_entity(entity),
+                    AsteroServerMsg::updates(update) => {
+                        for update in update.updates {
+                            self.update_entity(update.Entity)
+                        }
+                    },
                 }
             }
 
@@ -310,40 +358,6 @@ impl MainState {
                 println!("Server is not available! Closing game...");
                 ctx.quit()?;
             }
-        }
-
-        match msg {
-            Msg::SimUpdates(updates) => {
-                for update in updates {
-                    match update.entity {
-                        Entity::ASTEROID => {
-                            if self.asteroids.contains_key(&update.id) {
-                                self.asteroids
-                                    .entry(update.id)
-                                    .and_modify(|a| a.update_body(&update.body));
-                            }
-                        }
-
-                        Entity::PLAYER => {
-                            if update.id == self.player_id {
-                                self.player.update_body(&update.body);
-                            } else {
-                                self.others
-                                    .entry(update.id)
-                                    .and_modify(|p| p.update_body(&update.body));
-                            }
-                        }
-
-                        Entity::UNKNOWN_ENTITY => {}
-                    }
-                }
-            }
-            Msg::OtherInput(other) => {
-                self.others
-                    .get_mut(&other.id)
-                    .map_or(true,|o| o.update_input(&other.input));
-            }
-            _ => {}
         }
 
         Ok(())
@@ -359,7 +373,7 @@ fn print_instructions() {
     println!();
 }
 
-impl EventHandler for MainState {
+impl<'a> EventHandler for MainState<'a> {
 
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         const DESIRED_FPS: u32 = 60;
@@ -377,7 +391,7 @@ impl EventHandler for MainState {
                 player.wrap_position(x_bound, y_bound);
             }
 
-            for (_, shot) in &mut self.shots {
+            for shot in &mut self.shots {
                 shot.update_position(seconds);
                 shot.wrap_position(x_bound, y_bound);
             }
@@ -422,7 +436,7 @@ impl EventHandler for MainState {
 
             self.player.draw(ctx, &mut self.assets, coords)?;
 
-            for (_, shot) in &self.shots {
+            for shot in &self.shots {
                 shot.draw(ctx, &mut self.assets, coords)?;
             }
 
@@ -490,8 +504,8 @@ impl EventHandler for MainState {
         };
 
         if let Some(update) = update {
-            if self.player.update_input(&update) {
-                self.client.send(Msg::Input(update));
+            if self.input.update(&update) {
+                self.client.send(Msg::ToServer(update.into()));
             }
         }
     }
@@ -522,8 +536,8 @@ impl EventHandler for MainState {
         };
 
         if let Some(update) = update {
-            if self.player.update_input(&update) {
-                self.client.send(Msg::Input(update));
+            if self.input.update(&update) {
+                self.client.send(Msg::ToServer(update.into()));
             }
         }
     }
