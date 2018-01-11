@@ -1,7 +1,5 @@
-use std::borrow::Cow;
 use std::io;
 use std::iter::repeat;
-use std::marker::PhantomData;
 use std::net::{SocketAddr, SocketAddrV6, Ipv6Addr, IpAddr};
 use std::sync::mpsc as std_mpsc;
 use std::time::Duration;
@@ -11,62 +9,60 @@ use futures::{Stream, Sink, Future, stream};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::{Core, Timeout};
-use quick_protobuf::{Writer, BytesReader, MessageWrite, MessageRead};
+use prost::Message;
 
 use proto::{
     astero,
     mmob,
-    AsteroServerMsg,
-    MmobClientMsg,
-    MmobServerMsg,
 };
 
 
 #[derive(Debug)]
-pub enum Msg<'a> {
+pub enum Msg {
     // helper messages (for internal game client usage)
     Unknown,
     ServerNotResponding,
 
     JoinGame(String),
-    JoinAck(astero::Player<'a>),
+    JoinAck(astero::Player),
     LeaveGame,
     Heartbeat,
     Latency(mmob::LatencyMeasure),
 
-    ToServer(astero::Client),
-    FromServer(AsteroServerMsg<'a>),
+    ToServer(astero::client::Msg),
+    FromServer(astero::server::Msg),
 }
 
-impl<'a> Msg<'a> {
-    pub fn from_bytes(buf: &'a [u8]) -> io::Result<Self> {
-        let mut rdr = BytesReader::from_bytes(buf);
-        let msg = mmob::Server::from_reader(&mut rdr, buf);
+impl Msg {
+    pub fn from_bytes(buf: &[u8]) -> io::Result<Self> {
+        let msg = mmob::Server::decode(buf);
 
         let msg = match msg {
             Err(..) => Msg::Unknown,
             Ok(msg) => {
-                match msg.Msg {
-                    MmobServerMsg::heartbeat(..) => Msg::Heartbeat,
-                    MmobServerMsg::latency_measure(measure) => Msg::Latency(measure),
-                    MmobServerMsg::None => Msg::Unknown,
-                    MmobServerMsg::join_ack(ack) => {
+                let msg = msg.msg.unwrap();
+                match msg {
+                    mmob::server::Msg::Heartbeat(..) => Msg::Heartbeat,
+                    mmob::server::Msg::LatencyMeasure(measure) => Msg::Latency(measure),
+                    mmob::server::Msg::JoinAck(ack) => {
                         if let Some(payload) = ack.payload {
-                            let mut rdr = BytesReader::from_bytes(&payload);
-                            let player = astero::Player::from_reader(&mut rdr, &payload)
-                                .expect("Failed to decode player");
+                            let player = astero::Player::decode(payload)
+                                .expect("Failed to decode player data");
 
                             Msg::JoinAck(player)
                         } else {
                             Msg::Unknown
                         }
                     }
-                    MmobServerMsg::proxied(msg) => {
-                        let mut rdr = BytesReader::from_bytes(&msg.msg);
-                        let msg = astero::Server::from_reader(&mut rdr, &msg.msg)
+                    mmob::server::Msg::Proxied(msg) => {
+                        let msg = astero::Server::decode(msg.msg)
                             .expect("Failed to decode proxied message");
 
-                        Msg::FromServer(msg.Msg)
+                        if let Some(msg) = msg.msg {
+                            Msg::FromServer(msg)
+                        } else {
+                            Msg::Unknown
+                        }
                     }
                 }
             },
@@ -77,27 +73,25 @@ impl<'a> Msg<'a> {
 }
 
 
-struct ClientCodec<'a> {
+struct ClientCodec {
     server: SocketAddr,
     buf: Vec<u8>,
-    phantom: PhantomData<&'a ()>,
 }
 
-impl<'a> ClientCodec<'a> {
+impl ClientCodec {
     pub fn new() -> Self {
         let server = SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::localhost(), 11111, 0, 0));
 
         ClientCodec {
             server,
             buf: Vec::new(),
-            phantom: PhantomData {}
         }
     }
 }
 
-impl<'a> UdpCodec for ClientCodec<'a> {
-    type In = Msg<'a>;
-    type Out = Msg<'a>;
+impl UdpCodec for ClientCodec {
+    type In = Msg;
+    type Out = Msg;
 
     fn decode(&mut self, src: &SocketAddr, buf: &[u8]) -> io::Result<Self::In> {
         if *src != self.server {
@@ -110,27 +104,22 @@ impl<'a> UdpCodec for ClientCodec<'a> {
     fn encode(&mut self, msg: Self::Out, buf: &mut Vec<u8>) -> SocketAddr {
         let msg = match msg {
             Msg::JoinGame(nickname) => {
-                let payload = astero::JoinPayload {
-                    nickname: Cow::from(nickname)
-                };
-                let mut writer = Writer::new(self.buf);
-                payload.write_message(&mut writer)
+                let payload = astero::JoinPayload { nickname };
+                payload.encode(&mut self.buf)
                     .expect("Failed to write JoinPayload");
 
-                MmobClientMsg::join(mmob::JoinGame {
-                    payload: Some(Cow::from(self.buf)),
+                mmob::client::Msg::Join(mmob::JoinGame {
+                    payload: Some(self.buf.clone()),
                 })
             }
-            Msg::LeaveGame => MmobClientMsg::leave(mmob::LeaveGame {}),
-            Msg::Heartbeat => MmobClientMsg::heartbeat(mmob::Heartbeat {}),
-            Msg::Latency(measure) => MmobClientMsg::latency_measure(measure),
+            Msg::LeaveGame => mmob::client::Msg::Leave(mmob::LeaveGame {}),
+            Msg::Heartbeat => mmob::client::Msg::Heartbeat(mmob::Heartbeat {}),
+            Msg::Latency(measure) => mmob::client::Msg::LatencyMeasure(measure),
             Msg::ToServer(msg) => {
-                let mut writer = Writer::new(self.buf);
-                msg.write_message(&mut writer)
-                    .expect("Failed to write proxied Client message");
+                msg.encode(&mut self.buf);
 
-                MmobClientMsg::proxied(mmob::Proxied {
-                    msg: Cow::from(self.buf)
+                mmob::client::Msg::Proxied(mmob::Proxied {
+                    msg: self.buf.clone()
                 })
             }
 
@@ -140,9 +129,8 @@ impl<'a> UdpCodec for ClientCodec<'a> {
             Msg::FromServer(..) => unreachable!()
         };
 
-        let msg = mmob::Client { Msg: msg };
-        let mut writer = Writer::new(buf);
-        msg.write_message(&mut writer)
+        let msg = mmob::Client { msg: Some(msg) };
+        msg.encode(buf)
             .expect("Failed to encode message");
 
         self.buf.clear();
@@ -152,14 +140,14 @@ impl<'a> UdpCodec for ClientCodec<'a> {
 }
 
 
-pub struct ClientHandle<'a> {
+pub struct ClientHandle {
     thread_handle: Option<thread::JoinHandle<()>>,
-    to: Option<futures_mpsc::UnboundedSender<Msg<'a>>>,
-    from: std_mpsc::Receiver<Msg<'a>>,
+    to: Option<futures_mpsc::UnboundedSender<Msg>>,
+    from: std_mpsc::Receiver<Msg>,
     timeouts: u32,
 }
 
-impl<'a> ClientHandle<'a> {
+impl ClientHandle {
     pub fn start() -> Self {
         let (to_main_thread, from_client) = std_mpsc::channel();
         let (to_client, from_main_thread) = futures_mpsc::unbounded();
@@ -233,7 +221,7 @@ impl<'a> ClientHandle<'a> {
             .expect("Failed to stop client thread");
     }
 
-    pub fn send(&self, msg: Msg<'a>) {
+    pub fn send(&self, msg: Msg) {
         self.to
             .as_ref()
             .and_then(|s| {

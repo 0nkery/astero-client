@@ -10,7 +10,11 @@ extern crate rand;
 
 extern crate futures;
 extern crate tokio_core;
-extern crate quick_protobuf;
+
+extern crate bytes;
+extern crate prost;
+#[macro_use]
+extern crate prost_derive;
 
 use std::collections::HashMap;
 use std::env;
@@ -47,9 +51,7 @@ mod util;
 
 mod proto;
 use proto::{
-    AsteroServerMsg,
-    AsteroCreateEntity,
-    AsteroUpdateEntity,
+    astero,
     astero::Entity,
     astero::Input,
 };
@@ -165,7 +167,7 @@ impl InputState {
     }
 }
 
-struct MainState<'a> {
+struct MainState {
     player_id: u32,
     player: Player,
     asteroids: HashMap<u32, Asteroid>,
@@ -185,10 +187,10 @@ struct MainState<'a> {
     score_display: graphics::Text,
     health_bar: health_bar::StaticHealthBar,
 
-    client: client::ClientHandle<'a>,
+    client: client::ClientHandle,
 }
 
-impl<'a> MainState<'a> {
+impl MainState {
     fn new(ctx: &mut Context) -> GameResult<Self> {
         graphics::set_background_color(ctx, (0, 0, 0, 255).into());
 
@@ -288,12 +290,11 @@ impl<'a> MainState<'a> {
         self.player.set_body(this.body);
     }
 
-    fn create_entity(&mut self, ctx: &mut Context, entity: AsteroCreateEntity) -> GameResult<()> {
+    fn create_entity(&mut self, ctx: &mut Context, entity: astero::create::Entity) -> GameResult<()> {
         match entity {
-            AsteroCreateEntity::player(other) => {
+            astero::create::Entity::Player(other) => {
                 let nickname = other.nickname
-                    .expect("Missing nickname on remote player")
-                    .into_owned();
+                    .expect("Missing nickname on remote player");
 
                 let mut player = Player::new(
                     ctx, nickname, &self.assets.small_font, constant::colors::RED
@@ -301,46 +302,45 @@ impl<'a> MainState<'a> {
                 player.set_body(other.body);
                 self.others.insert(other.id, player);
             }
-            AsteroCreateEntity::asteroid(asteroid) => {
+            astero::create::Entity::Asteroid(asteroid) => {
                 self.asteroids.insert(asteroid.id, Asteroid::new(asteroid));
             }
-            AsteroCreateEntity::shot(shot) => {
+            astero::create::Entity::Shot(shot) => {
                 self.shots.push(Shot::new(shot));
             }
-            AsteroCreateEntity::None => {}
         }
 
         Ok(())
     }
 
     fn destroy_entity(&mut self, entity: proto::astero::Destroy) {
-        match entity.entity {
-            Entity::UNKNOWN_ENTITY => {},
-            Entity::PLAYER => {
+        let kind = Entity::from_i32(entity.entity).expect("Missing entity on Destroy");
+        match kind {
+            Entity::UnknownEntity => {},
+            Entity::Player => {
                 let player = self.others.remove(&entity.id);
                 if let Some(player) = player {
                     println!("Player disconnected. ID - {}, nickname - {}", entity.id, player.nickname());
                 }
             }
-            Entity::ASTEROID => {
+            Entity::Asteroid => {
                 self.asteroids.remove(&entity.id);
             }
         }
     }
 
-    fn update_entity(&mut self, entity: AsteroUpdateEntity) {
+    fn update_entity(&mut self, entity: astero::update::Entity) {
         match entity {
-            AsteroUpdateEntity::player(player) => {
+            astero::update::Entity::Player(player) => {
                 self.others
                     .entry(player.id)
                     .and_modify(|p| p.update_body(&player.body));
             }
-            AsteroUpdateEntity::asteroid(asteroid) => {
+            astero::update::Entity::Asteroid(asteroid) => {
                 self.asteroids
                     .entry(asteroid.id)
                     .and_modify(|a| a.update_body(&asteroid.body));
             }
-            AsteroUpdateEntity::None => {}
         }
     }
 
@@ -349,14 +349,14 @@ impl<'a> MainState<'a> {
             Msg::JoinAck(this_player) => self.init_player(this_player),
             Msg::FromServer(msg) => {
                 match msg {
-                    AsteroServerMsg::create(create) => self.create_entity(ctx, create.Entity)?,
-                    AsteroServerMsg::destroy(entity) => self.destroy_entity(entity),
-                    AsteroServerMsg::updates(update) => {
+                    astero::server::Msg::Create(create) =>
+                        self.create_entity(ctx, create.entity.unwrap())?,
+                    astero::server::Msg::Destroy(entity) => self.destroy_entity(entity),
+                    astero::server::Msg::Updates(update) => {
                         for update in update.updates {
-                            self.update_entity(update.Entity)
+                            self.update_entity(update.entity.unwrap())
                         }
                     },
-                    AsteroServerMsg::None => {}
                 }
             }
 
@@ -382,7 +382,7 @@ fn print_instructions() {
     println!();
 }
 
-impl<'a> EventHandler for MainState<'a> {
+impl EventHandler for MainState {
 
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         const DESIRED_FPS: u32 = 60;
