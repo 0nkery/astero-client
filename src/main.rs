@@ -4,7 +4,6 @@
 #![feature(ip_constructors)]
 #![feature(use_nested_groups)]
 #![feature(entry_and_modify)]
-#![feature(nll)]
 
 extern crate ggez;
 extern crate rand;
@@ -308,6 +307,7 @@ impl<'a> MainState<'a> {
             AsteroCreateEntity::shot(shot) => {
                 self.shots.push(Shot::new(shot));
             }
+            AsteroCreateEntity::None => {}
         }
 
         Ok(())
@@ -321,6 +321,9 @@ impl<'a> MainState<'a> {
                 if let Some(player) = player {
                     println!("Player disconnected. ID - {}, nickname - {}", entity.id, player.nickname());
                 }
+            }
+            Entity::ASTEROID => {
+                self.asteroids.remove(&entity.id);
             }
         }
     }
@@ -337,6 +340,7 @@ impl<'a> MainState<'a> {
                     .entry(asteroid.id)
                     .and_modify(|a| a.update_body(&asteroid.body));
             }
+            AsteroUpdateEntity::None => {}
         }
     }
 
@@ -352,6 +356,7 @@ impl<'a> MainState<'a> {
                             self.update_entity(update.Entity)
                         }
                     },
+                    AsteroServerMsg::None => {}
                 }
             }
 
@@ -359,6 +364,9 @@ impl<'a> MainState<'a> {
                 println!("Server is not available! Closing game...");
                 ctx.quit()?;
             }
+
+            Msg::Unknown | Msg::JoinGame(..) | Msg::LeaveGame |
+            Msg::Heartbeat | Msg::Latency(..) | Msg::ToServer(..) => unreachable!(),
         }
 
         Ok(())

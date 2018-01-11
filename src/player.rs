@@ -56,7 +56,7 @@ impl Player {
     }
 
     pub fn update_body(&mut self, update: &astero::Body) {
-        let error = self.body.update(update);
+        self.body.update(update);
     }
 
     fn accelerate(&mut self, dt: f32, direction: i32) {

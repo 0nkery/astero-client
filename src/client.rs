@@ -13,10 +13,13 @@ use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::{Core, Timeout};
 use quick_protobuf::{Writer, BytesReader, MessageWrite, MessageRead};
 
-use proto::astero;
-use proto::mmob;
-use proto::AsteroServerMsg;
-use proto::MmobClientMsg;
+use proto::{
+    astero,
+    mmob,
+    AsteroServerMsg,
+    MmobClientMsg,
+    MmobServerMsg,
+};
 
 
 #[derive(Debug)]
@@ -36,15 +39,35 @@ pub enum Msg<'a> {
 }
 
 impl<'a> Msg<'a> {
-    pub fn from_bytes(buf: &[u8]) -> io::Result<Self> {
+    pub fn from_bytes(buf: &'a [u8]) -> io::Result<Self> {
         let mut rdr = BytesReader::from_bytes(buf);
-        let msg = mmob::Server::from_reader(&mut rdr, &buf);
+        let msg = mmob::Server::from_reader(&mut rdr, buf);
 
         let msg = match msg {
             Err(..) => Msg::Unknown,
             Ok(msg) => {
-                match msg {
+                match msg.Msg {
+                    MmobServerMsg::heartbeat(..) => Msg::Heartbeat,
+                    MmobServerMsg::latency_measure(measure) => Msg::Latency(measure),
+                    MmobServerMsg::None => Msg::Unknown,
+                    MmobServerMsg::join_ack(ack) => {
+                        if let Some(payload) = ack.payload {
+                            let mut rdr = BytesReader::from_bytes(&payload);
+                            let player = astero::Player::from_reader(&mut rdr, &payload)
+                                .expect("Failed to decode player");
 
+                            Msg::JoinAck(player)
+                        } else {
+                            Msg::Unknown
+                        }
+                    }
+                    MmobServerMsg::proxied(msg) => {
+                        let mut rdr = BytesReader::from_bytes(&msg.msg);
+                        let msg = astero::Server::from_reader(&mut rdr, &msg.msg)
+                            .expect("Failed to decode proxied message");
+
+                        Msg::FromServer(msg.Msg)
+                    }
                 }
             },
         };
@@ -101,6 +124,20 @@ impl<'a> UdpCodec for ClientCodec<'a> {
             Msg::LeaveGame => MmobClientMsg::leave(mmob::LeaveGame {}),
             Msg::Heartbeat => MmobClientMsg::heartbeat(mmob::Heartbeat {}),
             Msg::Latency(measure) => MmobClientMsg::latency_measure(measure),
+            Msg::ToServer(msg) => {
+                let mut writer = Writer::new(self.buf);
+                msg.write_message(&mut writer)
+                    .expect("Failed to write proxied Client message");
+
+                MmobClientMsg::proxied(mmob::Proxied {
+                    msg: Cow::from(self.buf)
+                })
+            }
+
+            Msg::Unknown |
+            Msg::ServerNotResponding |
+            Msg::JoinAck(..) |
+            Msg::FromServer(..) => unreachable!()
         };
 
         let msg = mmob::Client { Msg: msg };
