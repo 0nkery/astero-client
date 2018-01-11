@@ -1,5 +1,34 @@
 use ggez::graphics::{Vector2, Point2};
 
+use proto::astero::Coord;
+
+
+impl Copy for Coord {}
+
+impl Into<Point2> for Coord {
+    fn into(self) -> Point2 {
+        Point2::new(self.x, self.y)
+    }
+}
+
+impl From<Point2> for Coord {
+    fn from(point: Point2) -> Self {
+        Coord { x: point.x, y: point.y }
+    }
+}
+
+impl Into<Vector2> for Coord {
+    fn into(self) -> Vector2 {
+        Vector2::new(self.x, self.y)
+    }
+}
+
+impl From<Vector2> for Coord {
+    fn from(vec: Vector2) -> Self {
+        Coord { x: vec.x, y: vec.y }
+    }
+}
+
 
 pub fn vec_from_angle(angle: f32) -> Vector2 {
     Vector2::new(angle.sin(), angle.cos())

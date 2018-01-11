@@ -7,12 +7,7 @@ use ggez::{
 };
 
 use ::Assets;
-use client::proto::{
-    Body,
-    ProtoBody,
-    Input,
-    BodyError,
-};
+use body::Body;
 use constant::{
     PLAYER_LIFE,
     PLAYER_ACCELERATION,
@@ -23,6 +18,7 @@ use util::{
     vec_from_angle,
     world_to_screen_coords,
 };
+use proto::astero;
 
 use ::Movable;
 use ::Destroyable;
@@ -34,8 +30,6 @@ pub struct Player {
     nickname: String,
     nickname_display: graphics::Text,
     color: graphics::Color,
-    input: Input,
-    body_error: BodyError,
 }
 
 impl Player {
@@ -54,22 +48,15 @@ impl Player {
             nickname,
             nickname_display,
             color,
-            input: Input::default(),
-            body_error: BodyError::default(),
         })
     }
 
-    pub fn set_body(&mut self, body: ProtoBody) {
+    pub fn set_body(&mut self, body: astero::Body) {
         self.body = Body::new(body);
     }
 
-    pub fn update_body(&mut self, update: &ProtoBody) {
-        let error = self.body.update(update);
-        self.body_error.add(error);
-    }
-
-    pub fn update_input(&mut self, update: &Input) -> bool {
-        self.input.update(&update)
+    pub fn update_body(&mut self, update: &astero::Body) {
+        self.body.update(update);
     }
 
     fn accelerate(&mut self, dt: f32, direction: i32) {
@@ -92,10 +79,7 @@ impl Player {
     pub fn draw(&self, ctx: &mut Context, assets: &mut Assets, coords: (u32, u32)) -> GameResult<()> {
         if self.is_ready() {
             let (sw, sh) = coords;
-            let pos = graphics::Point2::new(
-                self.body.pos.x + self.body_error.pos_error.x,
-                self.body.pos.y + self.body_error.pos_error.y
-            );
+            let pos = graphics::Point2::new(self.body.pos.x, self.body.pos.y);
             let pos = world_to_screen_coords(sw, sh, pos);
 
             let image = assets.player_image();
@@ -105,7 +89,7 @@ impl Player {
                 image,
                 graphics::DrawParam {
                     dest: pos,
-                    rotation: self.body.rot + self.body_error.rot_error,
+                    rotation: self.body.rot,
                     offset: graphics::Point2::new(0.5, 0.5),
                     scale: graphics::Point2::new(
                         self.body.size / image.width() as f32,
@@ -169,18 +153,9 @@ impl Destroyable for Player {
 }
 
 impl Movable for Player {
-    fn update_position(&mut self, dt: f32) {
-        let acceleration = self.input.accel.unwrap_or(0);
-        self.accelerate(dt, acceleration);
-        self.body.rotate(dt, self.input.turn.unwrap_or(0) as f32);
-        self.body.update_position(dt);
+    fn update_position(&mut self, dt: f32) {}
 
-        self.body_error.reduce();
-    }
-
-    fn wrap_position(&mut self, sx: f32, sy: f32) {
-        self.body.wrap_position(sx, sy);
-    }
+    fn wrap_position(&mut self, sx: f32, sy: f32) {}
 
     fn get_body(&self) -> &Body {
         &self.body

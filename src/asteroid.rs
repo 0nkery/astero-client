@@ -1,14 +1,11 @@
 use ggez::{Context, graphics, GameResult};
 
-use client::proto::{
-    Body,
-    ProtoBody,
-    Asteroid as ProtoAsteroid,
-};
 
+use body::Body;
 use health_bar;
 use constant::ROCK_LIFE;
 use util::world_to_screen_coords;
+use proto::astero;
 
 use ::Movable;
 
@@ -32,14 +29,14 @@ impl ::Destroyable for Asteroid {
 }
 
 impl Asteroid {
-    pub fn new(inner: ProtoAsteroid) -> Self {
+    pub fn new(inner: astero::Asteroid) -> Self {
         Asteroid {
             body: Body::new(inner.body),
-            life: inner.life,
+            life: inner.life.unwrap_or(0.0),
         }
     }
 
-    pub fn update_body(&mut self, body: &ProtoBody) {
+    pub fn update_body(&mut self, body: &astero::Body) {
         self.body.update(body);
     }
 

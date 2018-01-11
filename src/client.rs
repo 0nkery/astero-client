@@ -1,34 +1,19 @@
-mod defs;
-pub mod proto;
-mod body;
-
 use std::io;
 use std::iter::repeat;
 use std::net::{SocketAddr, SocketAddrV6, Ipv6Addr, IpAddr};
-use std::thread;
-use std::time::Duration;
 use std::sync::mpsc as std_mpsc;
+use std::time::Duration;
+use std::thread;
 
 use futures::{Stream, Sink, Future, stream};
 use futures::sync::mpsc as futures_mpsc;
 use tokio_core::net::{UdpCodec, UdpSocket};
 use tokio_core::reactor::{Core, Timeout};
-use quick_protobuf::{Writer, BytesReader, MessageWrite, MessageRead};
+use prost::Message;
 
-use client::proto::{
-    Join,
-    Leave,
-    Heartbeat,
-    JoinAck,
-    mod_Server,
-    Server,
-    OtherData,
-    OtherLeft,
-    Spawn,
-    SimUpdate,
-    Input,
-    OtherInput,
-    LatencyMeasure,
+use proto::{
+    astero,
+    mmob,
 };
 
 
@@ -38,81 +23,59 @@ pub enum Msg {
     Unknown,
     ServerNotResponding,
 
-    // both client & server
+    JoinGame(String),
+    JoinAck(astero::Player),
+    LeaveGame,
     Heartbeat,
+    Latency(mmob::LatencyMeasure),
 
-    // client messages
-    Join(String),
-    Leave,
-    Input(Input),
-    Latency(LatencyMeasure),
-
-    // server messages
-    JoinAck(JoinAck),
-    OtherJoined(OtherData),
-    OtherLeft(OtherLeft),
-    Spawn(Spawn),
-    SimUpdates(Vec<SimUpdate>),
-    OtherInput(OtherInput),
+    ToServer(astero::client::Msg),
+    FromServer(astero::server::Msg),
 }
 
 impl Msg {
     pub fn from_bytes(buf: &[u8]) -> io::Result<Self> {
-        let mut rdr = BytesReader::from_bytes(buf);
-        let msg = Server::from_reader(&mut rdr, &buf);
+        let msg = mmob::Server::decode(buf);
 
         let msg = match msg {
             Err(..) => Msg::Unknown,
-            Ok(msg) => msg.into(),
+            Ok(msg) => {
+                let msg = msg.msg.unwrap();
+                match msg {
+                    mmob::server::Msg::Heartbeat(..) => Msg::Heartbeat,
+                    mmob::server::Msg::LatencyMeasure(measure) => Msg::Latency(measure),
+                    mmob::server::Msg::JoinAck(ack) => {
+                        if let Some(payload) = ack.payload {
+                            let player = astero::Player::decode(payload)
+                                .expect("Failed to decode player data");
+
+                            Msg::JoinAck(player)
+                        } else {
+                            Msg::Unknown
+                        }
+                    }
+                    mmob::server::Msg::Proxied(msg) => {
+                        let msg = astero::Server::decode(msg.msg)
+                            .expect("Failed to decode proxied message");
+
+                        if let Some(msg) = msg.msg {
+                            Msg::FromServer(msg)
+                        } else {
+                            Msg::Unknown
+                        }
+                    }
+                }
+            },
         };
 
         Ok(msg)
-    }
-
-    pub fn into_bytes(self, buf: &mut Vec<u8>) -> io::Result<()> {
-        let msg = match self {
-            Msg::Join(nickname) => Some(Join::new(nickname)),
-            Msg::Leave => Some(Leave::new()),
-            Msg::Heartbeat => Some(Heartbeat::new()),
-            Msg::Input(input) => Some(Input::new(input)),
-            Msg::Latency(latency) => Some(LatencyMeasure::new(latency)),
-
-            _ => None
-        };
-
-        if let Some(msg) = msg {
-            let mut writer = Writer::new(buf);
-            msg.write_message(&mut writer).map_err(|e| -> io::Error { e.into() })?;
-        }
-
-        Ok(())
-    }
-}
-
-
-impl<'a> From<Server<'a>> for Msg {
-    fn from(msg_from_server: Server<'a>) -> Self {
-        let msg = msg_from_server.msg;
-
-        match msg {
-            mod_Server::OneOfmsg::join_ack(ack) => Msg::JoinAck(ack),
-            mod_Server::OneOfmsg::other_joined(other) => Msg::OtherJoined(other.into()),
-            mod_Server::OneOfmsg::other_left(other) => Msg::OtherLeft(other),
-            mod_Server::OneOfmsg::heartbeat(..) => Msg::Heartbeat,
-            mod_Server::OneOfmsg::spawn(spawn) => Msg::Spawn(spawn),
-            mod_Server::OneOfmsg::sim_updates(list_of) => Msg::SimUpdates(list_of.updates),
-            mod_Server::OneOfmsg::other_input(input) => Msg::OtherInput(input),
-            mod_Server::OneOfmsg::latency(latency) => Msg::Latency(latency),
-            mod_Server::OneOfmsg::gameplay_events(..) => Msg::Unknown,
-
-            mod_Server::OneOfmsg::None => Msg::Unknown,
-        }
     }
 }
 
 
 struct ClientCodec {
-    server: SocketAddr
+    server: SocketAddr,
+    buf: Vec<u8>,
 }
 
 impl ClientCodec {
@@ -120,7 +83,8 @@ impl ClientCodec {
         let server = SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::localhost(), 11111, 0, 0));
 
         ClientCodec {
-            server
+            server,
+            buf: Vec::new(),
         }
     }
 }
@@ -138,7 +102,38 @@ impl UdpCodec for ClientCodec {
     }
 
     fn encode(&mut self, msg: Self::Out, buf: &mut Vec<u8>) -> SocketAddr {
-        msg.into_bytes(buf).expect("Failed to serialize message");
+        let msg = match msg {
+            Msg::JoinGame(nickname) => {
+                let payload = astero::JoinPayload { nickname };
+                payload.encode(&mut self.buf)
+                    .expect("Failed to write JoinPayload");
+
+                mmob::client::Msg::Join(mmob::JoinGame {
+                    payload: Some(self.buf.clone()),
+                })
+            }
+            Msg::LeaveGame => mmob::client::Msg::Leave(mmob::LeaveGame {}),
+            Msg::Heartbeat => mmob::client::Msg::Heartbeat(mmob::Heartbeat {}),
+            Msg::Latency(measure) => mmob::client::Msg::LatencyMeasure(measure),
+            Msg::ToServer(msg) => {
+                msg.encode(&mut self.buf);
+
+                mmob::client::Msg::Proxied(mmob::Proxied {
+                    msg: self.buf.clone()
+                })
+            }
+
+            Msg::Unknown |
+            Msg::ServerNotResponding |
+            Msg::JoinAck(..) |
+            Msg::FromServer(..) => unreachable!()
+        };
+
+        let msg = mmob::Client { msg: Some(msg) };
+        msg.encode(buf)
+            .expect("Failed to encode message");
+
+        self.buf.clear();
 
         self.server
     }
@@ -213,7 +208,7 @@ impl ClientHandle {
     }
 
     pub fn stop(&mut self) {
-        self.send(Msg::Leave);
+        self.send(Msg::LeaveGame);
 
         // Dropping `to` causes Sink-part of UdpFramed to flush all pending packets and exit.
         let sender = self.to.take().expect("Failed to flush all pending packets");
@@ -242,7 +237,6 @@ impl ClientHandle {
             Ok(Msg::ServerNotResponding) => {
                 self.timeouts += 1;
                 if self.timeouts >= 3 {
-                    println!("Server is not responding...");
                     return Ok(Msg::ServerNotResponding);
                 }
 

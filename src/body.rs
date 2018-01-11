@@ -5,51 +5,7 @@ use util::reflect_vector;
 
 use constant::MAX_PHYSICS_VEL;
 
-use super::defs::astero::{
-    Body as ProtoBody,
-};
-
-
-#[derive(Debug)]
-pub struct BodyError {
-    pub pos_error: Point2,
-    pub rot_error: f32,
-}
-
-impl BodyError {
-    pub fn add(&mut self, other: BodyError) {
-        self.pos_error.x += other.pos_error.x;
-        self.pos_error.y += other.pos_error.y;
-        self.rot_error += other.rot_error;
-    }
-
-    pub fn reduce(&mut self) {
-        self.rot_error *= 0.9;
-        if self.rot_error < 0.00001 {
-            self.rot_error = 0.0;
-        }
-        if self.pos_error.x > 3.0 {
-            self.pos_error.x *= 0.85;
-        } else {
-            self.pos_error.x *= 0.95;
-        }
-
-        if self.pos_error.y > 3.0 {
-            self.pos_error.y *= 0.85;
-        } else {
-            self.pos_error.y *= 0.95;
-        }
-    }
-}
-
-impl Default for BodyError {
-    fn default() -> Self {
-        BodyError {
-            pos_error: Point2::origin(),
-            rot_error: 0.0,
-        }
-    }
-}
+use proto::astero;
 
 
 #[derive(Debug)]
@@ -62,7 +18,7 @@ pub struct Body {
 }
 
 impl Body {
-    pub fn new(body: ProtoBody) -> Self {
+    pub fn new(body: astero::Body) -> Self {
         Body {
             pos: body.pos.into(),
             vel: body.vel.into(),
@@ -72,25 +28,12 @@ impl Body {
         }
     }
 
-    pub fn update(&mut self, body: &ProtoBody) -> BodyError {
-        let mut error = BodyError::default();
-
-        let new_pos: Point2 = body.pos.into();
-        error.pos_error.x = self.pos.x - new_pos.x;
-        error.pos_error.y = self.pos.y - new_pos.y;
-
-        self.pos = new_pos;
-
+    pub fn update(&mut self, body: &astero::Body) {
+        self.pos = body.pos.into();
         self.vel = body.vel.into();
+        self.rot = body.rot.unwrap_or(self.rot);
         self.rvel = body.rvel.unwrap_or(self.rvel);
         self.size = body.size.unwrap_or(self.size);
-
-        if let Some(new_rot) = body.rot {
-            error.rot_error = self.rot - new_rot;
-            self.rot = new_rot;
-        }
-
-        error
     }
 
     pub fn update_position(&mut self, dt: f32) {

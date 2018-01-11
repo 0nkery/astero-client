@@ -5,11 +5,9 @@ use ggez::{
 };
 
 use ::Assets;
-use client::proto::{
-    Body,
-    ProtoShot,
-};
+use body::Body;
 use util::world_to_screen_coords;
+use proto::astero;
 
 use ::Movable;
 use ::Destroyable;
@@ -20,8 +18,9 @@ pub struct Shot {
     ttl: f32,
 }
 
+
 impl Shot {
-    pub fn new(shot: ProtoShot) -> Self {
+    pub fn new(shot: astero::Shot) -> Self {
         Shot {
             body: Body::new(shot.body),
             ttl: shot.ttl,
@@ -35,7 +34,7 @@ impl Shot {
             ctx,
             assets.shot_image(),
             graphics::DrawParam {
-                dest: world_to_screen_coords(sw, sh, self.body.pos),
+                dest: world_to_screen_coords(sw, sh, self.body.pos.into()),
                 offset: graphics::Point2::new(0.5, 0.5),
                 .. Default::default()
             }
