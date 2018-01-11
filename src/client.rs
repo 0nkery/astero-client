@@ -1,12 +1,10 @@
+use std;
 use std::io;
 use std::net::{SocketAddr, SocketAddrV6, Ipv6Addr, IpAddr};
-use std::sync::mpsc as std_mpsc;
 use std::time::Duration;
 use std::thread;
 
-use futures::{
-    sync::mpsc as futures_mpsc
-};
+use futures;
 use tokio_core::{
     net::UdpSocket,
     reactor::Core,
@@ -153,15 +151,15 @@ impl UdpCodec for ClientCodec {
 
 pub struct ClientHandle {
     thread_handle: Option<thread::JoinHandle<()>>,
-    to: Option<futures_mpsc::UnboundedSender<Msg>>,
-    from: std_mpsc::Receiver<Msg>,
+    to: Option<futures::sync::mpsc::UnboundedSender<Msg>>,
+    from: std::sync::mpsc::Receiver<Msg>,
     timeouts: u32,
 }
 
 impl ClientHandle {
     pub fn start() -> Self {
-        let (to_main_thread, from_client) = std_mpsc::channel();
-        let (to_client, from_main_thread) = futures_mpsc::unbounded();
+        let (to_main_thread, from_client) = std::sync::mpsc::channel();
+        let (to_client, from_main_thread) = futures::sync::mpsc::unbounded();
 
         let thread_handle = thread::spawn(move || {
             let mut reactor = Core::new().expect("Failed to init reactor");
@@ -236,7 +234,7 @@ impl ClientHandle {
             });
     }
 
-    pub fn try_recv(&mut self) -> Result<Msg, std_mpsc::TryRecvError> {
+    pub fn try_recv(&mut self) -> Result<Msg, std::sync::mpsc::TryRecvError> {
         match self.from.try_recv() {
             Ok(Msg::Unknown) => self.try_recv(),
 
