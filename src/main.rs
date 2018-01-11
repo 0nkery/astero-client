@@ -213,6 +213,7 @@ impl MainState {
 
         let client = client::ClientHandle::start();
         client.send(Msg::JoinGame(nickname));
+        println!("Connecting to server...");
 
         let screen_width = ctx.conf.window_mode.width;
         let screen_height = ctx.conf.window_mode.height;

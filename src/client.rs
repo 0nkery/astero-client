@@ -1,18 +1,15 @@
 use std::io;
-use std::iter::repeat;
 use std::net::{SocketAddr, SocketAddrV6, Ipv6Addr, IpAddr};
 use std::sync::mpsc as std_mpsc;
 use std::time::Duration;
 use std::thread;
 
 use futures::{
-    stream,
     sync::mpsc as futures_mpsc
 };
 use tokio_core::{
     net::UdpSocket,
     reactor::Core,
-    reactor::Timeout,
     reactor::Interval,
 };
 
@@ -182,14 +179,9 @@ impl ClientHandle {
             // If timeout comes first it means that server is not sending any data.
             let timeout_handle = handle.clone();
             let timeouts =
-                stream::iter_result::<_, _, ()>(repeat(Ok(())))
-                    .and_then(move |()|
-                        Timeout::new(Duration::new(6, 0), &timeout_handle)
-                            .expect("Failed to setup timeout")
-                            .map_err(|err| panic!("{}", err))
-                    )
-                    .map(|_| Msg::ServerNotResponding)
-                    .map_err(|_| io::ErrorKind::Other.into());
+                Interval::new(Duration::new(6, 0), &timeout_handle)
+                .expect("Failed to setup interval")
+                .map(|_| Msg::ServerNotResponding);
 
             let ingoing = ingoing.select(timeouts);
 
