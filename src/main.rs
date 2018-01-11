@@ -4,6 +4,7 @@
 #![feature(ip_constructors)]
 #![feature(use_nested_groups)]
 #![feature(entry_and_modify)]
+#![feature(nll)]
 
 extern crate ggez;
 extern crate rand;
