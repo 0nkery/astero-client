@@ -153,6 +153,7 @@ pub struct ClientHandle {
     thread_handle: Option<thread::JoinHandle<()>>,
     to: Option<futures::sync::mpsc::UnboundedSender<Msg>>,
     from: std::sync::mpsc::Receiver<Msg>,
+    stop: Option<futures::sync::oneshot::Sender<()>>,
     timeouts: u32,
 }
 
@@ -160,6 +161,7 @@ impl ClientHandle {
     pub fn start() -> Self {
         let (to_main_thread, from_client) = std::sync::mpsc::channel();
         let (to_client, from_main_thread) = futures::sync::mpsc::unbounded();
+        let (stop_sender, stop_receiver) = futures::sync::oneshot::channel();
 
         let thread_handle = thread::spawn(move || {
             let mut reactor = Core::new().expect("Failed to init reactor");
@@ -188,25 +190,22 @@ impl ClientHandle {
                 Ok(())
             }).map_err(|err| panic!("{}", err));
 
-            // Receiver is spawned separately. We don't care much about received packets
-            // when we're going to exit this thread.
-            handle.spawn(receiver);
-
             let from_main_thread = from_main_thread
                 .map_err(|_err| -> io::Error {
                     io::ErrorKind::Other.into()
                 });
 
-            // But `from_main_thread` stream should terminate in order to shutdown this thread.
             let sender = outgoing.send_all(from_main_thread);
+            let client = sender.join(receiver).select2(stop_receiver);
 
-            reactor.run(sender).expect("Client thread failure");
+            reactor.run(client).expect("Client thread failure");
         });
 
         ClientHandle {
             thread_handle: Some(thread_handle),
             to: Some(to_client),
             from: from_client,
+            stop: Some(stop_sender),
             timeouts: 0
         }
     }
@@ -214,15 +213,17 @@ impl ClientHandle {
     pub fn stop(&mut self) {
         self.send(Msg::LeaveGame);
 
-        // Dropping `to` causes Sink-part of UdpFramed to flush all pending packets and exit.
-        let sender = self.to.take().expect("Failed to flush all pending packets");
-        drop(sender);
+        self.stop
+            .take()
+            .expect("Absent stop sender?! What?!")
+            .send(())
+            .expect("Failed to stop client reactor");
 
         self.thread_handle
             .take()
             .expect("Absent thread handle?! What?")
             .join()
-            .expect("Failed to stop client thread");
+            .expect("Failed to join client thread");
     }
 
     pub fn send(&self, msg: Msg) {
