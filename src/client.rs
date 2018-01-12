@@ -15,6 +15,7 @@ use proto::{
     astero,
     mmob,
 };
+use util::cur_time_in_millis;
 
 
 use futures::{
@@ -177,10 +178,9 @@ impl ClientHandle {
 
             // Stream of timeouts. Selected with network messages.
             // If timeout comes first it means that server is not sending any data.
-            let timeout_handle = handle.clone();
             let timeouts =
-                Interval::new(Duration::new(6, 0), &timeout_handle)
-                .expect("Failed to setup interval")
+                Interval::new(Duration::new(6, 0), &handle)
+                .expect("Failed to setup timeouts")
                 .map(|_| Msg::ServerNotResponding);
 
             let ingoing = ingoing.select(timeouts);
@@ -195,9 +195,18 @@ impl ClientHandle {
                     io::ErrorKind::Other.into()
                 });
 
-            let sender = outgoing.send_all(from_main_thread);
-            let client = sender.join(receiver).select2(stop_receiver);
+            let latency_measures =
+                Interval::new(Duration::new(1, 0), &handle)
+                    .expect("Failed to setup latency measures")
+                    .map(|_| {
+                        Msg::Latency(mmob::LatencyMeasure {
+                            timestamp: cur_time_in_millis()
+                        })
+                    });
 
+            let sender = outgoing.send_all(from_main_thread.select(latency_measures));
+
+            let client = sender.join(receiver).select2(stop_receiver);
             reactor.run(client).ok().expect("Client thread failure");
         });
 
