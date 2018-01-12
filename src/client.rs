@@ -198,7 +198,7 @@ impl ClientHandle {
             let sender = outgoing.send_all(from_main_thread);
             let client = sender.join(receiver).select2(stop_receiver);
 
-            reactor.run(client).expect("Client thread failure");
+            reactor.run(client).ok().expect("Client thread failure");
         });
 
         ClientHandle {
