@@ -6,7 +6,9 @@
 #![feature(entry_and_modify)]
 
 extern crate ggez;
+
 extern crate rand;
+extern crate time;
 
 extern crate futures;
 extern crate tokio_core;

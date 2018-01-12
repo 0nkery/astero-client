@@ -255,10 +255,6 @@ impl ClientHandle {
                         self.send(Msg::Heartbeat);
                         self.try_recv()
                     }
-                    Msg::Latency(latency) => {
-                        self.send(Msg::Latency(latency));
-                        self.try_recv()
-                    }
 
                     _ => Ok(msg)
                 }

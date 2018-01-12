@@ -1,4 +1,5 @@
 use ggez::graphics::{Vector2, Point2};
+use time;
 
 use proto::astero::Coord;
 
@@ -29,7 +30,6 @@ impl From<Vector2> for Coord {
     }
 }
 
-
 pub fn vec_from_angle(angle: f32) -> Vector2 {
     Vector2::new(angle.sin(), angle.cos())
 }
@@ -44,4 +44,11 @@ pub fn world_to_screen_coords(screen_width: u32, screen_height: u32, point: Poin
 
 pub fn reflect_vector(vec: Vector2, normal: Vector2) -> Vector2 {
     vec - 2.0 * normal * vec.dot(&normal)
+}
+
+pub fn cur_time_in_millis() -> u64 {
+    let timespec = time::get_time();
+    let millis = timespec.sec * 1000 + (timespec.nsec as i64 / 1000 / 1000);
+
+    millis as u64
 }

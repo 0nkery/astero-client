@@ -75,6 +75,7 @@ dependencies = [
  "prost-build 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost-derive 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.20 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.39 (registry+https://github.com/rust-lang/crates.io-index)",
  "tokio-core 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 

@@ -11,6 +11,7 @@ tokio-core = "0.1"
 prost = "0.2"
 prost-derive = "0.2"
 bytes = "0.4"
+time = "0.1"
 
 [dependencies.clippy]
 version = "*"
