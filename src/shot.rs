@@ -20,9 +20,9 @@ pub struct Shot {
 
 
 impl Shot {
-    pub fn new(shot: astero::Shot) -> Self {
+    pub fn new(shot: &astero::Shot) -> Self {
         Shot {
-            body: Body::new(shot.body),
+            body: Body::new(&shot.body),
             ttl: shot.ttl,
         }
     }
@@ -34,7 +34,7 @@ impl Shot {
             ctx,
             assets.shot_image(),
             graphics::DrawParam {
-                dest: world_to_screen_coords(sw, sh, self.body.pos.into()),
+                dest: world_to_screen_coords(sw, sh, self.body.pos),
                 offset: graphics::Point2::new(0.5, 0.5),
                 .. Default::default()
             }

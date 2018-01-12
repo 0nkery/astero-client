@@ -259,7 +259,7 @@ impl MainState {
     }
 
     fn handle_collisions(&mut self) {
-        for (_, rock) in &mut self.asteroids {
+        for rock in self.asteroids.values_mut() {
 
             if self.player.collided(rock) {
                 self.player.damage(1.0);
@@ -287,10 +287,10 @@ impl MainState {
         Ok(())
     }
 
-    fn init_player(&mut self, this: proto::astero::Player) {
+    fn init_player(&mut self, this: &proto::astero::Player) {
         println!("Connected to server. Conn ID - {}", this.id);
         self.player_id = this.id;
-        self.player.set_body(this.body);
+        self.player.set_body(&this.body);
     }
 
     fn create_entity(&mut self, ctx: &mut Context, entity: astero::create::Entity) -> GameResult<()> {
@@ -302,13 +302,13 @@ impl MainState {
                 let mut player = Player::new(
                     ctx, nickname, &self.assets.small_font, constant::colors::RED
                 )?;
-                player.set_body(other.body);
+                player.set_body(&other.body);
                 self.others.insert(other.id, player);
             }
-            astero::create::Entity::Asteroid(asteroid) => {
+            astero::create::Entity::Asteroid(ref asteroid) => {
                 self.asteroids.insert(asteroid.id, Asteroid::new(asteroid));
             }
-            astero::create::Entity::Shot(shot) => {
+            astero::create::Entity::Shot(ref shot) => {
                 self.shots.push(Shot::new(shot));
             }
         }
@@ -316,7 +316,7 @@ impl MainState {
         Ok(())
     }
 
-    fn destroy_entity(&mut self, entity: proto::astero::Destroy) {
+    fn destroy_entity(&mut self, entity: &proto::astero::Destroy) {
         let kind = Entity::from_i32(entity.entity).expect("Missing entity on Destroy");
         match kind {
             Entity::UnknownEntity => {},
@@ -349,12 +349,12 @@ impl MainState {
 
     fn handle_message(&mut self, ctx: &mut Context, msg: Msg) -> GameResult<()> {
         match msg {
-            Msg::JoinAck(this_player) => self.init_player(this_player),
+            Msg::JoinAck(ref this_player) => self.init_player(this_player),
             Msg::FromServer(msg) => {
                 match msg {
                     astero::server::Msg::Create(create) =>
                         self.create_entity(ctx, create.entity.unwrap())?,
-                    astero::server::Msg::Destroy(entity) => self.destroy_entity(entity),
+                    astero::server::Msg::Destroy(ref entity) => self.destroy_entity(entity),
                     astero::server::Msg::Updates(update) => {
                         for update in update.updates {
                             self.update_entity(update.entity.unwrap())
@@ -398,7 +398,7 @@ impl EventHandler for MainState {
             self.player.update_position(seconds);
             self.player.wrap_position(x_bound, y_bound);
 
-            for (_id, player) in &mut self.others {
+            for player in self.others.values_mut() {
                 player.update_position(seconds);
                 player.wrap_position(x_bound, y_bound);
             }
@@ -408,7 +408,7 @@ impl EventHandler for MainState {
                 shot.wrap_position(x_bound, y_bound);
             }
 
-            for (_id, rock) in &mut self.asteroids {
+            for rock in self.asteroids.values_mut() {
                 rock.update_position(seconds);
                 rock.wrap_position(x_bound, y_bound);
             }
@@ -452,7 +452,7 @@ impl EventHandler for MainState {
                 shot.draw(ctx, &mut self.assets, coords)?;
             }
 
-            for (_id, asteroid) in &self.asteroids {
+            for asteroid in self.asteroids.values() {
                 asteroid.draw(ctx, &mut self.assets, coords)?;
             }
 

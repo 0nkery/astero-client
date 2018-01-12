@@ -18,7 +18,7 @@ pub struct Body {
 }
 
 impl Body {
-    pub fn new(body: astero::Body) -> Self {
+    pub fn new(body: &astero::Body) -> Self {
         Body {
             pos: body.pos.into(),
             vel: body.vel.into(),

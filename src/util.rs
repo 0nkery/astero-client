@@ -48,7 +48,7 @@ pub fn reflect_vector(vec: Vector2, normal: Vector2) -> Vector2 {
 
 pub fn cur_time_in_millis() -> u64 {
     let timespec = time::get_time();
-    let millis = timespec.sec * 1000 + (timespec.nsec as i64 / 1000 / 1000);
+    let millis = timespec.sec * 1000 + (i64::from(timespec.nsec) / 1000 / 1000);
 
     millis as u64
 }

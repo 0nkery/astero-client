@@ -51,7 +51,7 @@ impl Player {
         })
     }
 
-    pub fn set_body(&mut self, body: astero::Body) {
+    pub fn set_body(&mut self, body: &astero::Body) {
         self.body = Body::new(body);
     }
 
@@ -64,12 +64,11 @@ impl Player {
             return;
         }
 
-        let mut angle = self.body.rot;
-        let mut accel_value = PLAYER_ACCELERATION;
-        if direction < 0 {
-            angle += std::f32::consts::PI;
-            accel_value = PLAYER_DECELERATION;
-        }
+        let (angle, accel_value) = if direction < 0 {
+            (self.body.rot, PLAYER_ACCELERATION)
+        } else {
+            (self.body.rot + std::f32::consts::PI, PLAYER_DECELERATION)
+        };
 
         let dir_vec = vec_from_angle(angle);
         let acceleration = dir_vec * accel_value;
