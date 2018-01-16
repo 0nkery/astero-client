@@ -53,6 +53,7 @@ mod util;
 
 mod proto;
 use proto::{
+    mmob,
     astero,
     astero::Entity,
     astero::Input,
@@ -190,6 +191,7 @@ struct MainState {
     health_bar: health_bar::StaticHealthBar,
 
     client: client::ClientHandle,
+    latency: f32,
 }
 
 impl MainState {
@@ -247,7 +249,8 @@ impl MainState {
             score_display,
             health_bar,
 
-            client
+            client,
+            latency: 0.0,
         };
 
         Ok(s)
@@ -347,9 +350,24 @@ impl MainState {
         }
     }
 
+    fn update_latency(&mut self, latency_measure: &mmob::LatencyMeasure) {
+        // Using exponential moving average with n = 6.
+        const SMOOTHING_CONST: f32 = 2.0 / (6.0 + 1.0);
+
+        let now = util::cur_time_in_millis();
+        let measured_latency = (now - latency_measure.timestamp) as f32 / 2.0;
+
+        self.latency = if self.latency == 0.0 {
+            measured_latency
+        } else {
+            SMOOTHING_CONST * measured_latency + (1.0 - SMOOTHING_CONST) * self.latency
+        };
+    }
+
     fn handle_message(&mut self, ctx: &mut Context, msg: Msg) -> GameResult<()> {
         match msg {
             Msg::JoinAck(ref this_player) => self.init_player(this_player),
+
             Msg::FromServer(msg) => {
                 match msg {
                     astero::server::Msg::Create(create) =>
@@ -368,8 +386,10 @@ impl MainState {
                 ctx.quit()?;
             }
 
+            Msg::Latency(ref measure) => self.update_latency(measure),
+
             Msg::Unknown | Msg::JoinGame(..) | Msg::LeaveGame |
-            Msg::Heartbeat | Msg::Latency(..) | Msg::ToServer(..) => unreachable!(),
+            Msg::Heartbeat | Msg::ToServer(..) => unreachable!(),
         }
 
         Ok(())
