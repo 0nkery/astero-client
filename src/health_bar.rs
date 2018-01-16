@@ -8,16 +8,16 @@ use constant::colors;
 use constant::gui::STATIC_HEALTH_BAR_LINE_WIDTH;
 
 
-pub struct StaticHealthBar {
+pub struct Static {
     x: f32,
     y: f32,
     width: f32,
     height: f32
 }
 
-impl StaticHealthBar {
+impl Static {
     pub fn new(x: f32, y: f32, width: f32, height: f32) -> Self {
-        StaticHealthBar {x, y, width, height}
+        Self {x, y, width, height}
     }
 
     pub fn draw(&self, ctx: &mut Context, fraction: f32) -> GameResult<()> {
@@ -54,11 +54,11 @@ impl StaticHealthBar {
 }
 
 
-pub struct StickyHealthBar;
+pub struct Sticky;
 
 const STICKY_HEIGHT: f32 = 3.0;
 
-impl StickyHealthBar {
+impl Sticky {
     pub fn draw(
         ctx: &mut Context,
         pos: graphics::Point2,

@@ -30,7 +30,7 @@ impl ::Destroyable for Asteroid {
 
 impl Asteroid {
     pub fn new(inner: &astero::Asteroid) -> Self {
-        Asteroid {
+        Self {
             body: Body::new(&inner.body),
             life: inner.life.unwrap_or(0.0),
         }
@@ -60,7 +60,7 @@ impl Asteroid {
             }
         )?;
 
-        health_bar::StickyHealthBar::draw(
+        health_bar::Sticky::draw(
             ctx, pos, self.body.size,
             self.life / ROCK_LIFE, None
         )?;

@@ -19,7 +19,7 @@ pub struct Body {
 
 impl Body {
     pub fn new(body: &astero::Body) -> Self {
-        Body {
+        Self {
             pos: body.pos.into(),
             vel: body.vel.into(),
             rot: body.rot.unwrap_or(0.0),
@@ -77,7 +77,7 @@ impl Body {
 
 impl Default for Body {
     fn default() -> Self {
-        Body {
+        Self {
             pos: Point2::origin(),
             vel: nalgebra::zero(),
             rot: 0.0,

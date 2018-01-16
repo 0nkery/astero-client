@@ -50,7 +50,7 @@ impl Msg {
         let msg = match msg {
             Err(..) => Msg::Unknown,
             Ok(msg) => {
-                let msg = msg.msg.unwrap();
+                let msg = msg.msg.expect("Got empty mmob message from server");
                 match msg {
                     mmob::server::Msg::Heartbeat(..) => Msg::Heartbeat,
                     mmob::server::Msg::LatencyMeasure(measure) => Msg::Latency(measure),
@@ -92,7 +92,7 @@ impl ClientCodec {
     pub fn new() -> Self {
         let server = SocketAddr::V6(SocketAddrV6::new(Ipv6Addr::localhost(), 11_111, 0, 0));
 
-        ClientCodec {
+        Self {
             server,
             buf: Vec::new(),
         }
@@ -150,7 +150,7 @@ impl UdpCodec for ClientCodec {
 }
 
 
-pub struct ClientHandle {
+pub struct Handle {
     thread_handle: Option<thread::JoinHandle<()>>,
     to: Option<futures::sync::mpsc::UnboundedSender<Msg>>,
     from: std::sync::mpsc::Receiver<Msg>,
@@ -158,7 +158,7 @@ pub struct ClientHandle {
     timeouts: u32,
 }
 
-impl ClientHandle {
+impl Handle {
     pub fn start() -> Self {
         let (to_main_thread, from_client) = std::sync::mpsc::channel();
         let (to_client, from_main_thread) = futures::sync::mpsc::unbounded();
@@ -210,7 +210,7 @@ impl ClientHandle {
             reactor.run(client).ok().expect("Client thread failure");
         });
 
-        ClientHandle {
+        Self {
             thread_handle: Some(thread_handle),
             to: Some(to_client),
             from: from_client,

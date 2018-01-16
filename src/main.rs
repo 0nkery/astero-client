@@ -1,6 +1,28 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", feature(clippy))]
 
+#![warn(use_self)]
+#![warn(wrong_pub_self_convention)]
+#![warn(stutter)]
+#![warn(single_match_else)]
+#![warn(similar_names)]
+#![warn(result_unwrap_used)]
+#![warn(result_map_unwrap_or_else)]
+#![warn(replace_consts)]
+#![warn(range_plus_one)]
+#![warn(pub_enum_variant_names)]
+#![warn(option_unwrap_used)]
+#![warn(option_map_unwrap_or_else)]
+#![warn(option_map_unwrap_or)]
+#![warn(mutex_integer)]
+#![warn(mut_mut)]
+#![warn(int_plus_one)]
+#![warn(if_not_else)]
+#![warn(float_cmp_const)]
+#![warn(filter_map)]
+#![warn(fallible_impl_from)]
+#![warn(enum_glob_use)]
+
 #![feature(ip_constructors)]
 #![feature(use_nested_groups)]
 #![feature(entry_and_modify)]
@@ -108,7 +130,7 @@ impl Assets {
         let font = graphics::Font::new(ctx, "/DejaVuSerif.ttf", 18)?;
         let small_font = graphics::Font::new(ctx, "/DejaVuSerif.ttf", 12)?;
 
-        Ok(Assets {
+        Ok(Self {
             player_image,
             shot_image,
             rock_image,
@@ -139,7 +161,7 @@ pub struct InputState {
 
 impl Default for InputState {
     fn default() -> Self {
-        InputState {
+        Self {
             turn: 0,
             accel: 0,
             fire: false,
@@ -188,9 +210,9 @@ struct MainState {
 
     gui_dirty: bool,
     score_display: graphics::Text,
-    health_bar: health_bar::StaticHealthBar,
+    health_bar: health_bar::Static,
 
-    client: client::ClientHandle,
+    client: client::Handle,
     latency: f32,
 }
 
@@ -215,21 +237,21 @@ impl MainState {
 
         let player = Player::new(ctx, nickname.clone(), &assets.small_font, constant::colors::GREEN)?;
 
-        let client = client::ClientHandle::start();
+        let client = client::Handle::start();
         client.send(Msg::JoinGame(nickname));
         println!("Connecting to server...");
 
         let screen_width = ctx.conf.window_mode.width;
         let screen_height = ctx.conf.window_mode.height;
 
-        let health_bar = health_bar::StaticHealthBar::new(
+        let health_bar = health_bar::Static::new(
             10 as f32,
             screen_height as f32 - HEALTH_BAR_SIZE - 5.0,
             (screen_width / 2) as f32,
             HEALTH_BAR_SIZE
         );
 
-        let s = MainState {
+        let s = Self {
             player_id: 0,
             player,
             asteroids: HashMap::new(),
@@ -322,7 +344,7 @@ impl MainState {
     fn destroy_entity(&mut self, entity: &proto::astero::Destroy) {
         let kind = Entity::from_i32(entity.entity).expect("Missing entity on Destroy");
         match kind {
-            Entity::UnknownEntity => {},
+            Entity::Unknown => {},
             Entity::Player => {
                 let player = self.others.remove(&entity.id);
                 if let Some(player) = player {
@@ -370,12 +392,15 @@ impl MainState {
 
             Msg::FromServer(msg) => {
                 match msg {
-                    astero::server::Msg::Create(create) =>
-                        self.create_entity(ctx, create.entity.unwrap())?,
+                    astero::server::Msg::Create(create) => {
+                        let entity = create.entity.expect("Got empty create entity from server");
+                        self.create_entity(ctx, entity)?
+                    }
                     astero::server::Msg::Destroy(ref entity) => self.destroy_entity(entity),
                     astero::server::Msg::Updates(update) => {
                         for update in update.updates {
-                            self.update_entity(update.entity.unwrap())
+                            let entity = update.entity.expect("Got empty update entity from server");
+                            self.update_entity(entity);
                         }
                     },
                 }

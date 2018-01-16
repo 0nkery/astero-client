@@ -13,7 +13,7 @@ use constant::{
     PLAYER_ACCELERATION,
     PLAYER_DECELERATION,
 };
-use health_bar::StickyHealthBar;
+use health_bar::Sticky;
 use util::{
     vec_from_angle,
     world_to_screen_coords,
@@ -42,7 +42,7 @@ impl Player {
 
         let nickname_display = graphics::Text::new(ctx, &nickname, font)?;
 
-        Ok(Player {
+        Ok(Self {
             body: Body::default(),
             life: PLAYER_LIFE,
             nickname,
@@ -98,7 +98,7 @@ impl Player {
                 }
             )?;
 
-            StickyHealthBar::draw(
+            Sticky::draw(
                 ctx, pos, self.body.size,
                 self.life() / self.max_life(),
                 Some(self.color)

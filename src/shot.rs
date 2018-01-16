@@ -21,7 +21,7 @@ pub struct Shot {
 
 impl Shot {
     pub fn new(shot: &astero::Shot) -> Self {
-        Shot {
+        Self {
             body: Body::new(&shot.body),
             ttl: shot.ttl,
         }

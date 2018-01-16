@@ -14,7 +14,7 @@ impl Into<Point2> for Coord {
 
 impl From<Point2> for Coord {
     fn from(point: Point2) -> Self {
-        Coord { x: point.x, y: point.y }
+        Self { x: point.x, y: point.y }
     }
 }
 
@@ -26,7 +26,7 @@ impl Into<Vector2> for Coord {
 
 impl From<Vector2> for Coord {
     fn from(vec: Vector2) -> Self {
-        Coord { x: vec.x, y: vec.y }
+        Self { x: vec.x, y: vec.y }
     }
 }
 
