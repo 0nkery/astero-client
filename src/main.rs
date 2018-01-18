@@ -214,6 +214,7 @@ struct MainState {
 
     client: client::Handle,
     latency: f32,
+    server_time_delta: u64,
 }
 
 impl MainState {
@@ -273,6 +274,7 @@ impl MainState {
 
             client,
             latency: 0.0,
+            server_time_delta: 0,
         };
 
         Ok(s)
@@ -379,11 +381,17 @@ impl MainState {
         let now = util::cur_time_in_millis();
         let measured_latency = (now - latency_measure.timestamp) as f32 / 2.0;
 
+        self.server_time_delta = now - latency_measure.server_timestamp.unwrap_or(now);
+
         self.latency = if self.latency == 0.0 {
             measured_latency
         } else {
             SMOOTHING_CONST * measured_latency + (1.0 - SMOOTHING_CONST) * self.latency
         };
+    }
+
+    fn server_time(&self) -> u64 {
+        self.latency as u64 + self.server_time_delta
     }
 
     fn handle_message(&mut self, ctx: &mut Context, msg: Msg) -> GameResult<()> {
@@ -397,8 +405,8 @@ impl MainState {
                         self.create_entity(ctx, entity)?
                     }
                     astero::server::Msg::Destroy(ref entity) => self.destroy_entity(entity),
-                    astero::server::Msg::Updates(update) => {
-                        for update in update.updates {
+                    astero::server::Msg::List(updates) => {
+                        for update in updates.update_list {
                             let entity = update.entity.expect("Got empty update entity from server");
                             self.update_entity(entity);
                         }

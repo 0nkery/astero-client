@@ -200,7 +200,8 @@ impl Handle {
                     .expect("Failed to setup latency measures")
                     .map(|_| {
                         Msg::Latency(mmob::LatencyMeasure {
-                            timestamp: cur_time_in_millis()
+                            timestamp: cur_time_in_millis(),
+                            server_timestamp: None,
                         })
                     });
 
