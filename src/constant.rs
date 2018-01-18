@@ -31,11 +31,7 @@ pub const PLAYER_DECELERATION: f32 = 10.0;
 
 pub mod physics {
     pub const MAX_VEL: f32 = 250.0;
-    pub const DELTA_TIME: f32 = 0.01;
-}
-
-pub mod render {
-    pub const DESIRED_FPS: u32 = 60;
+    pub const DELTA_TIME: f64 = 0.01;
 }
 
 pub mod gui {

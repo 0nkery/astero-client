@@ -230,6 +230,8 @@ struct MainState<'a, 'b> {
 
     world: World,
     dispatcher: Dispatcher<'a, 'b>,
+
+    time_acc: f64,
 }
 
 impl<'a, 'b> MainState<'a, 'b> {
@@ -271,7 +273,7 @@ impl<'a, 'b> MainState<'a, 'b> {
             10 as f32,
             screen_height as f32 - constant::gui::HEALTH_BAR_SIZE - 5.0,
             (screen_width / 2) as f32,
-            HEALTH_BAR_SIZE
+            constant::gui::HEALTH_BAR_SIZE
         );
 
         let s = Self {
@@ -300,6 +302,7 @@ impl<'a, 'b> MainState<'a, 'b> {
 
             world,
             dispatcher,
+            time_acc: 0.0,
         };
 
         Ok(s)
@@ -456,10 +459,16 @@ fn print_instructions() {
 impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        while timer::check_update_time(ctx, constant::render::DESIRED_FPS) {
-            let seconds = 1.0 / (DESIRED_FPS as f32);
+        let frame_time = timer::get_delta(ctx);
+        let frame_time = timer::duration_to_f64(frame_time);
+
+        self.time_acc += frame_time;
+
+        while self.time_acc > constant::physics::DELTA_TIME {
             let x_bound = self.screen_width as f32 / 2.0;
             let y_bound = self.screen_height as f32 / 2.0;
+
+            let seconds = constant::physics::DELTA_TIME as f32;
 
             self.player.update_position(seconds);
             self.player.wrap_position(x_bound, y_bound);
@@ -501,6 +510,9 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
                 println!("Game over!");
                 ctx.quit()?;
             }
+
+            self.dispatcher.dispatch(&self.world.res);
+            self.time_acc -= constant::physics::DELTA_TIME;
         }
 
         Ok(())
@@ -628,9 +640,9 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 }
 
 fn main() {
-    let mut cb = ContextBuilder::new("Astero", "0nkery")
+    let mut cb = ContextBuilder::new("Astero", "onkery")
         .window_setup(conf::WindowSetup::default().title("Astero"))
-        .window_mode(conf::WindowMode::default().dimensions(800, 600));
+        .window_mode(conf::WindowMode::default().dimensions(800, 600).vsync(true));
 
     let mut path = path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     path.push("resources");
