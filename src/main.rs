@@ -28,6 +28,9 @@
 #![feature(entry_and_modify)]
 
 extern crate ggez;
+extern crate specs;
+#[macro_use]
+extern crate specs_derive;
 
 extern crate rand;
 extern crate time;

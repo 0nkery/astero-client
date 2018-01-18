@@ -5,6 +5,8 @@ authors = ["Dmitry Shlagoff <richyannet@yandex.ru>"]
 
 [dependencies]
 ggez = "0.4"
+specs = "0.10"
+specs-derive = "0.1"
 rand = "0.3"
 futures = "0.1"
 tokio-core = "0.1"
