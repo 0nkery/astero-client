@@ -3,7 +3,7 @@ use ggez::nalgebra;
 
 use util::reflect_vector;
 
-use constant::MAX_PHYSICS_VEL;
+use constant::physics;
 
 use proto::astero;
 
@@ -42,8 +42,8 @@ impl Body {
         }
 
         let norm_sq = self.vel.norm_squared();
-        if norm_sq > MAX_PHYSICS_VEL.powi(2) {
-            self.vel = self.vel / norm_sq.sqrt() * MAX_PHYSICS_VEL;
+        if norm_sq > physics::MAX_VEL.powi(2) {
+            self.vel = self.vel / norm_sq.sqrt() * physics::MAX_VEL;
         }
 
         let dv = self.vel * dt;

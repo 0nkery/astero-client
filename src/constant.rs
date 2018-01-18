@@ -29,7 +29,14 @@ pub const ROCK_LIFE: f32 = 2.0;
 pub const PLAYER_ACCELERATION: f32 = 60.0;
 pub const PLAYER_DECELERATION: f32 = 10.0;
 
-pub const MAX_PHYSICS_VEL: f32 = 250.0;
+pub mod physics {
+    pub const MAX_VEL: f32 = 250.0;
+    pub const DELTA_TIME: f32 = 0.01;
+}
+
+pub mod render {
+    pub const DESIRED_FPS: u32 = 60;
+}
 
 pub mod gui {
     pub const HEALTH_BAR_SIZE: f32 = 30.0;

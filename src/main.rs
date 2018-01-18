@@ -64,7 +64,6 @@ mod client;
 use client::Msg;
 
 mod constant;
-use constant::gui::HEALTH_BAR_SIZE;
 
 mod health_bar;
 
@@ -270,7 +269,7 @@ impl<'a, 'b> MainState<'a, 'b> {
 
         let health_bar = health_bar::Static::new(
             10 as f32,
-            screen_height as f32 - HEALTH_BAR_SIZE - 5.0,
+            screen_height as f32 - constant::gui::HEALTH_BAR_SIZE - 5.0,
             (screen_width / 2) as f32,
             HEALTH_BAR_SIZE
         );
@@ -457,9 +456,7 @@ fn print_instructions() {
 impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
-        const DESIRED_FPS: u32 = 60;
-
-        while timer::check_update_time(ctx, DESIRED_FPS) {
+        while timer::check_update_time(ctx, constant::render::DESIRED_FPS) {
             let seconds = 1.0 / (DESIRED_FPS as f32);
             let x_bound = self.screen_width as f32 / 2.0;
             let y_bound = self.screen_height as f32 / 2.0;
