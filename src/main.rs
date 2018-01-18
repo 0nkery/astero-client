@@ -45,11 +45,13 @@ use std::collections::HashMap;
 use std::env;
 use std::path;
 
-use ggez::conf;
-use ggez::event::*;
-use ggez::{Context, ContextBuilder, GameResult};
-use ggez::graphics;
-use ggez::timer;
+use ggez::{
+    Context, ContextBuilder, GameResult,
+    conf,
+    graphics,
+    timer,
+    event::*,
+};
 
 
 mod client;
