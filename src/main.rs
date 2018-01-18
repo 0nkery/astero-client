@@ -53,6 +53,12 @@ use ggez::{
     event::*,
 };
 
+use specs::{
+    World,
+    DispatcherBuilder,
+    Dispatcher,
+};
+
 
 mod client;
 use client::Msg;
@@ -74,7 +80,9 @@ use asteroid::Asteroid;
 mod shot;
 use shot::Shot;
 
-mod util;
+mod components;
+mod resources;
+mod systems;
 
 mod proto;
 use proto::{
@@ -83,6 +91,8 @@ use proto::{
     astero::Entity,
     astero::Input,
 };
+
+mod util;
 
 
 trait Movable {
@@ -195,7 +205,7 @@ impl InputState {
     }
 }
 
-struct MainState {
+struct MainState<'a, 'b> {
     player_id: u32,
     player: Player,
     asteroids: HashMap<u32, Asteroid>,
@@ -218,13 +228,23 @@ struct MainState {
     client: client::Handle,
     latency: u64,
     server_time_delta: u64,
+
+    world: World,
+    dispatcher: Dispatcher<'a, 'b>,
 }
 
-impl MainState {
+impl<'a, 'b> MainState<'a, 'b> {
     fn new(ctx: &mut Context) -> GameResult<Self> {
         graphics::set_background_color(ctx, (0, 0, 0, 255).into());
 
         print_instructions();
+
+        let mut world = World::new();
+        let mut dispatcher_builder = DispatcherBuilder::new();
+
+
+
+        let dispatcher = dispatcher_builder.build();
 
         let assets = Assets::new(ctx)?;
         let score_display = graphics::Text::new(ctx, "score", &assets.font)?;
@@ -278,6 +298,9 @@ impl MainState {
             client,
             latency: 0,
             server_time_delta: 0,
+
+            world,
+            dispatcher,
         };
 
         Ok(s)
@@ -431,7 +454,7 @@ fn print_instructions() {
     println!();
 }
 
-impl EventHandler for MainState {
+impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         const DESIRED_FPS: u32 = 60;
