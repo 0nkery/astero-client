@@ -59,12 +59,6 @@ use specs::{
     Dispatcher,
 };
 
-
-mod client;
-use client::Msg;
-
-mod constant;
-
 mod health_bar;
 
 mod body;
@@ -83,7 +77,10 @@ mod components;
 mod resources;
 mod systems;
 
+mod constant;
 mod proto;
+mod util;
+
 use proto::{
     mmob,
     astero,
@@ -91,7 +88,10 @@ use proto::{
     astero::Input,
 };
 
-mod util;
+use resources::{
+    client,
+    client::Msg,
+};
 
 
 trait Movable {
