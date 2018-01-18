@@ -208,7 +208,6 @@ struct MainState<'a, 'b> {
     player_id: u32,
     player: Player,
     asteroids: HashMap<u32, Asteroid>,
-    score: i32,
     others: HashMap<u32, Player>,
 
     shots: Vec<Shot>,
@@ -220,8 +219,6 @@ struct MainState<'a, 'b> {
     screen_width: u32,
     screen_height: u32,
 
-    gui_dirty: bool,
-    score_display: graphics::Text,
     health_bar: health_bar::Static,
 
     client: client::Handle,
@@ -248,7 +245,6 @@ impl<'a, 'b> MainState<'a, 'b> {
         let dispatcher = dispatcher_builder.build();
 
         let assets = Assets::new(ctx)?;
-        let score_display = graphics::Text::new(ctx, "score", &assets.font)?;
 
         let home_dir = env::home_dir().expect("Failed to retrieve home dir");
         let nickname =
@@ -280,7 +276,6 @@ impl<'a, 'b> MainState<'a, 'b> {
             player_id: 0,
             player,
             asteroids: HashMap::new(),
-            score: 0,
             others: HashMap::new(),
 
             shots: Vec::new(),
@@ -292,8 +287,6 @@ impl<'a, 'b> MainState<'a, 'b> {
             screen_width,
             screen_height,
 
-            gui_dirty: true,
-            score_display,
             health_bar,
 
             client,
@@ -306,11 +299,6 @@ impl<'a, 'b> MainState<'a, 'b> {
         };
 
         Ok(s)
-    }
-
-    fn clear_dead_stuff(&mut self) {
-        self.shots.retain(| s| s.is_alive());
-        self.asteroids.retain(|_, r| r.is_alive());
     }
 
     fn handle_collisions(&mut self) {
@@ -326,20 +314,9 @@ impl<'a, 'b> MainState<'a, 'b> {
                 if shot.collided(rock) {
                     shot.destroy();
                     rock.damage(1.0);
-                    if rock.is_dead() {
-                        self.score += 1;
-                    }
-                    self.gui_dirty = true;
                 }
             }
         }
-    }
-
-    fn update_ui(&mut self, ctx: &mut Context) -> GameResult<()> {
-        let score_str = format!("Score: {}", self.score);
-        self.score_display = graphics::Text::new(ctx, &score_str, &self.assets.font)?;
-
-        Ok(())
     }
 
     fn init_player(&mut self, this: &proto::astero::Player) {
@@ -499,13 +476,6 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
                 }
             }
 
-            self.clear_dead_stuff();
-
-            if self.gui_dirty {
-                self.update_ui(ctx)?;
-                self.gui_dirty = false;
-            }
-
             if self.player.is_dead() {
                 println!("Game over!");
                 ctx.quit()?;
@@ -538,13 +508,6 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
                 other.draw(ctx, &mut self.assets, coords)?;
             }
         }
-
-         let score_dest = graphics::Point2::new(
-             (self.score_display.width() / 2) as f32 + 200.0,
-             (self.score_display.height() / 2) as f32 + 10.0
-         );
-
-         graphics::draw(ctx, &self.score_display, score_dest, 0.0)?;
 
          self.health_bar.draw(ctx, self.player.life() / self.player.max_life())?;
 
