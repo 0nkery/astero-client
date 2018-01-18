@@ -29,8 +29,7 @@
 
 extern crate ggez;
 extern crate specs;
-#[macro_use]
-extern crate specs_derive;
+#[macro_use] extern crate specs_derive;
 
 extern crate rand;
 extern crate time;
@@ -40,8 +39,7 @@ extern crate tokio_core;
 
 extern crate bytes;
 extern crate prost;
-#[macro_use]
-extern crate prost_derive;
+#[macro_use] extern crate prost_derive;
 
 use std::collections::HashMap;
 use std::env;
@@ -216,7 +214,7 @@ struct MainState {
     health_bar: health_bar::Static,
 
     client: client::Handle,
-    latency: f32,
+    latency: u64,
     server_time_delta: u64,
 }
 
@@ -276,7 +274,7 @@ impl MainState {
             health_bar,
 
             client,
-            latency: 0.0,
+            latency: 0,
             server_time_delta: 0,
         };
 
@@ -378,19 +376,9 @@ impl MainState {
     }
 
     fn update_latency(&mut self, latency_measure: &mmob::LatencyMeasure) {
-        // Using exponential moving average with n = 6.
-        const SMOOTHING_CONST: f32 = 2.0 / (6.0 + 1.0);
-
         let now = util::cur_time_in_millis();
-        let measured_latency = (now - latency_measure.timestamp) as f32 / 2.0;
-
         self.server_time_delta = now - latency_measure.server_timestamp.unwrap_or(now);
-
-        self.latency = if self.latency == 0.0 {
-            measured_latency
-        } else {
-            SMOOTHING_CONST * measured_latency + (1.0 - SMOOTHING_CONST) * self.latency
-        };
+        self.latency = (now - latency_measure.timestamp) / 2;
     }
 
     fn server_time(&self) -> u64 {
