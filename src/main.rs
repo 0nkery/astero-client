@@ -606,7 +606,7 @@ impl EventHandler for MainState {
 }
 
 fn main() {
-    let mut cb = ContextBuilder::new("Astero", "herald-it")
+    let mut cb = ContextBuilder::new("Astero", "0nkery")
         .window_setup(conf::WindowSetup::default().title("Astero"))
         .window_mode(conf::WindowMode::default().dimensions(800, 600));
 
