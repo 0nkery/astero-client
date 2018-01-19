@@ -6,7 +6,6 @@ use ggez::{
     graphics,
 };
 
-use ::Assets;
 use body::Body;
 use constant::{
     PLAYER_LIFE,

@@ -4,7 +4,6 @@ use ggez::{
     GameResult,
 };
 
-use ::Assets;
 use body::Body;
 use util::world_to_screen_coords;
 use proto::astero;

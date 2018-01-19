@@ -119,46 +119,6 @@ trait Destroyable {
 }
 
 
-pub struct Assets {
-    player_image: graphics::Image,
-    shot_image: graphics::Image,
-    rock_image: graphics::Image,
-    font: graphics::Font,
-    small_font: graphics::Font,
-}
-
-impl Assets {
-    fn new(ctx: &mut Context) -> GameResult<Self> {
-        let player_image = graphics::Image::new(ctx, "/player.png")?;
-        let shot_image = graphics::Image::new(ctx, "/shot.png")?;
-        let rock_image = graphics::Image::new(ctx, "/rock.png")?;
-
-        let font = graphics::Font::new(ctx, "/DejaVuSerif.ttf", 18)?;
-        let small_font = graphics::Font::new(ctx, "/DejaVuSerif.ttf", 12)?;
-
-        Ok(Self {
-            player_image,
-            shot_image,
-            rock_image,
-            font,
-            small_font,
-        })
-    }
-
-    fn shot_image(&mut self) -> &mut graphics::Image {
-        &mut self.shot_image
-    }
-
-    fn asteroid_image(&mut self) -> &mut graphics::Image {
-        &mut self.rock_image
-    }
-
-    fn player_image(&mut self) -> &mut graphics::Image {
-        &mut self.player_image
-    }
-}
-
-
 struct MainState<'a, 'b> {
     player_id: u32,
     player: Player,
@@ -168,7 +128,6 @@ struct MainState<'a, 'b> {
     shots: Vec<Shot>,
     unconfirmed_shots: HashMap<u32, Shot>,
 
-    assets: Assets,
     screen_width: u32,
     screen_height: u32,
 
@@ -193,10 +152,9 @@ impl<'a, 'b> MainState<'a, 'b> {
 
         world.add_resource(resources::Input::new());
         world.add_resource(resources::ServerClock::new());
+        world.add_resource(resources::Assets::new(ctx)?);
 
         let dispatcher = dispatcher_builder.build();
-
-        let assets = Assets::new(ctx)?;
 
         let home_dir = env::home_dir().expect("Failed to retrieve home dir");
         let nickname =
@@ -233,7 +191,6 @@ impl<'a, 'b> MainState<'a, 'b> {
             shots: Vec::new(),
             unconfirmed_shots: HashMap::new(),
 
-            assets,
             screen_width,
             screen_height,
 
