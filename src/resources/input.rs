@@ -43,7 +43,9 @@ impl Input {
                 self.fire = true;
             },
 
-            _ => {}
+            _ => {
+                return None;
+            }
         }
 
         Some(self.diff(old_input))
@@ -62,7 +64,9 @@ impl Input {
             Keycode::Space => {
                 self.fire = false;
             },
-            _ => {}
+            _ => {
+                return None;
+            }
         }
 
         Some(self.diff(old_input))
