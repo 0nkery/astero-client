@@ -78,6 +78,7 @@ mod resources;
 mod systems;
 
 mod constant;
+mod msg;
 mod proto;
 mod util;
 
@@ -86,11 +87,6 @@ use proto::{
     astero,
     astero::Entity,
     astero::Input,
-};
-
-use resources::{
-    client,
-    client::Msg,
 };
 
 
@@ -221,7 +217,7 @@ struct MainState<'a, 'b> {
 
     health_bar: health_bar::Static,
 
-    client: client::Handle,
+    client: resources::client::Handle,
     latency: u64,
     server_time_delta: u64,
 
@@ -258,8 +254,8 @@ impl<'a, 'b> MainState<'a, 'b> {
 
         let player = Player::new(ctx, nickname.clone(), &assets.small_font, constant::colors::GREEN)?;
 
-        let client = client::Handle::start();
-        client.send(Msg::JoinGame(nickname));
+        let client = resources::client::Handle::start();
+        client.send(msg::Msg::JoinGame(nickname));
         println!("Connecting to server...");
 
         let screen_width = ctx.conf.window_mode.width;
@@ -389,11 +385,11 @@ impl<'a, 'b> MainState<'a, 'b> {
         self.latency as u64 + self.server_time_delta
     }
 
-    fn handle_message(&mut self, ctx: &mut Context, msg: Msg) -> GameResult<()> {
+    fn handle_message(&mut self, ctx: &mut Context, msg: msg::Msg) -> GameResult<()> {
         match msg {
-            Msg::JoinAck(ref this_player) => self.init_player(this_player),
+            msg::Msg::JoinAck(ref this_player) => self.init_player(this_player),
 
-            Msg::FromServer(msg) => {
+            msg::Msg::FromServer(msg) => {
                 match msg {
                     astero::server::Msg::Create(create) => {
                         let entity = create.entity.expect("Got empty create entity from server");
@@ -409,15 +405,15 @@ impl<'a, 'b> MainState<'a, 'b> {
                 }
             }
 
-            Msg::ServerNotResponding => {
+            msg::Msg::ServerNotResponding => {
                 println!("Server is not available! Closing game...");
                 ctx.quit()?;
             }
 
-            Msg::Latency(ref measure) => self.update_latency(measure),
+            msg::Msg::Latency(ref measure) => self.update_latency(measure),
 
-            Msg::Unknown | Msg::JoinGame(..) | Msg::LeaveGame |
-            Msg::Heartbeat | Msg::ToServer(..) => unreachable!(),
+            msg::Msg::Unknown | msg::Msg::JoinGame(..) | msg::Msg::LeaveGame |
+            msg::Msg::Heartbeat | msg::Msg::ToServer(..) => unreachable!(),
         }
 
         Ok(())
@@ -558,7 +554,7 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
         if let Some(update) = update {
             if self.input.update(&update) {
-                self.client.send(Msg::ToServer(update.into()));
+                self.client.send(msg::Msg::ToServer(update.into()));
             }
         }
     }
@@ -590,7 +586,7 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
         if let Some(update) = update {
             if self.input.update(&update) {
-                self.client.send(Msg::ToServer(update.into()));
+                self.client.send(msg::Msg::ToServer(update.into()));
             }
         }
     }
