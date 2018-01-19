@@ -519,7 +519,7 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
         ctx: &mut Context,
         keycode: Keycode,
         _keymod: Mod,
-        _repeat: bool
+        repeat: bool
     ) {
         let mut update = Input::default();
 

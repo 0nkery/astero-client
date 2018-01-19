@@ -19,7 +19,11 @@ impl Input {
         }
     }
 
-    pub fn key_down(&mut self, btn: Keycode) -> Option<astero::Input> {
+    pub fn key_down(&mut self, btn: Keycode, repeat: bool) -> Option<astero::Input> {
+        if repeat {
+            return None;
+        }
+
         let old_input = self.clone();
 
         match btn {
@@ -42,7 +46,7 @@ impl Input {
             _ => {}
         }
 
-        self.diff(old_input)
+        Some(self.diff(old_input))
     }
 
     pub fn key_up(&mut self, btn: Keycode) -> Option<astero::Input> {
@@ -61,7 +65,7 @@ impl Input {
             _ => {}
         }
 
-        self.diff(old_input)
+        Some(self.diff(old_input))
     }
 
     fn diff(
@@ -71,7 +75,7 @@ impl Input {
             accel,
             fire
         }: Self
-    ) -> Option<astero::Input> {
+    ) -> astero::Input {
         let mut msg = astero::Input::default();
 
         if self.turn != turn {
@@ -84,10 +88,6 @@ impl Input {
             msg.fire = Some(self.fire);
         }
 
-        if !msg.is_empty() {
-            return Some(msg);
-        }
-
-        None
+        msg
     }
 }
