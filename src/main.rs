@@ -411,13 +411,8 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
             self.handle_collisions();
 
-            let mut handled_messages = 0;
             while let Ok(msg) = self.client.try_recv() {
                 self.handle_message(ctx, msg)?;
-                handled_messages += 1;
-                if handled_messages >= 3 {
-                    break;
-                }
             }
 
             if self.player.is_dead() {
