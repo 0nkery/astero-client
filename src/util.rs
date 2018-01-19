@@ -44,8 +44,11 @@ pub fn world_to_screen_coords(screen_width: u32, screen_height: u32, point: Poin
 }
 
 pub fn reflect_vector(vec: Vector2, normal: Vector2) -> Vector2 {
-    // |normal| == 1.0
-    assert!((normal.norm_squared() - 1.0).abs() < std::f32::EPSILON);
+    // |normal| ^ 2 == 1.0
+    assert!(
+        (normal.norm_squared() == 0.0) ||
+        (normal.norm_squared() - 1.0).abs() < std::f32::EPSILON
+    );
 
     vec - 2.0 * normal * vec.dot(&normal)
 }
