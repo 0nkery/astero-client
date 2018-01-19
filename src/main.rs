@@ -217,7 +217,7 @@ struct MainState<'a, 'b> {
 
     health_bar: health_bar::Static,
 
-    client: resources::client::Handle,
+    client: resources::Client,
     latency: u64,
     server_time_delta: u64,
 
@@ -236,7 +236,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         let mut world = World::new();
         let mut dispatcher_builder = DispatcherBuilder::new();
 
-
+        world.add_resource(resources::Input::new());
 
         let dispatcher = dispatcher_builder.build();
 
@@ -254,7 +254,7 @@ impl<'a, 'b> MainState<'a, 'b> {
 
         let player = Player::new(ctx, nickname.clone(), &assets.small_font, constant::colors::GREEN)?;
 
-        let client = resources::client::Handle::start();
+        let client = resources::Client::start();
         client.send(msg::Msg::JoinGame(nickname));
         println!("Connecting to server...");
 

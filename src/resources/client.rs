@@ -95,7 +95,7 @@ impl UdpCodec for ClientCodec {
 }
 
 
-pub struct Handle {
+pub struct Client {
     thread_handle: Option<thread::JoinHandle<()>>,
     to: Option<futures::sync::mpsc::UnboundedSender<Msg>>,
     from: std::sync::mpsc::Receiver<Msg>,
@@ -103,7 +103,7 @@ pub struct Handle {
     timeouts: u32,
 }
 
-impl Handle {
+impl Client {
     pub fn start() -> Self {
         let (to_main_thread, from_client) = std::sync::mpsc::channel();
         let (to_client, from_main_thread) = futures::sync::mpsc::unbounded();
