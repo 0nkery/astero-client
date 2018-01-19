@@ -83,7 +83,6 @@ mod proto;
 mod util;
 
 use proto::{
-    mmob,
     astero,
     astero::Entity,
 };
@@ -176,8 +175,6 @@ struct MainState<'a, 'b> {
     health_bar: health_bar::Static,
 
     client: resources::Client,
-    latency: u64,
-    server_time_delta: u64,
 
     world: World,
     dispatcher: Dispatcher<'a, 'b>,
@@ -195,6 +192,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         let mut dispatcher_builder = DispatcherBuilder::new();
 
         world.add_resource(resources::Input::new());
+        world.add_resource(resources::ServerClock::new());
 
         let dispatcher = dispatcher_builder.build();
 
@@ -242,8 +240,6 @@ impl<'a, 'b> MainState<'a, 'b> {
             health_bar,
 
             client,
-            latency: 0,
-            server_time_delta: 0,
 
             world,
             dispatcher,
@@ -331,16 +327,6 @@ impl<'a, 'b> MainState<'a, 'b> {
         }
     }
 
-    fn update_latency(&mut self, latency_measure: &mmob::LatencyMeasure) {
-        let now = util::cur_time_in_millis();
-        self.server_time_delta = now - latency_measure.server_timestamp.unwrap_or(now);
-        self.latency = (now - latency_measure.timestamp) / 2;
-    }
-
-    fn server_time(&self) -> u64 {
-        self.latency as u64 + self.server_time_delta
-    }
-
     fn handle_message(&mut self, ctx: &mut Context, msg: msg::Msg) -> GameResult<()> {
         match msg {
             msg::Msg::JoinAck(ref this_player) => self.init_player(this_player),
@@ -366,7 +352,13 @@ impl<'a, 'b> MainState<'a, 'b> {
                 ctx.quit()?;
             }
 
-            msg::Msg::Latency(ref measure) => self.update_latency(measure),
+            msg::Msg::Latency(ref measure) => {
+                let mut server_clock = self.world.write_resource::<resources::ServerClock>();
+                server_clock.update(
+                    measure.timestamp,
+                    measure.server_timestamp.expect("Got empty server timestamp")
+                );
+            },
 
             msg::Msg::Unknown | msg::Msg::JoinGame(..) | msg::Msg::LeaveGame |
             msg::Msg::Heartbeat | msg::Msg::ToServer(..) => unreachable!(),
