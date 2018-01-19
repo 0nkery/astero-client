@@ -154,6 +154,9 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.add_resource(resources::ServerClock::new());
         world.add_resource(resources::Assets::new(ctx)?);
 
+        world.register::<components::Sprite>();
+        world.register::<components::Body>();
+
         let dispatcher = dispatcher_builder.build();
 
         let home_dir = env::home_dir().expect("Failed to retrieve home dir");

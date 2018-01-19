@@ -6,7 +6,7 @@ use ggez::{
 };
 
 
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SpriteKind {
     Player = 0,
     Asteroid = 1,
