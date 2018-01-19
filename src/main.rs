@@ -380,6 +380,10 @@ fn print_instructions() {
 impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
+        while let Ok(msg) = self.client.try_recv() {
+            self.handle_message(ctx, msg)?;
+        }
+
         let frame_time = timer::get_delta(ctx);
         let frame_time = timer::duration_to_f64(frame_time);
 
@@ -410,10 +414,6 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
             }
 
             self.handle_collisions();
-
-            while let Ok(msg) = self.client.try_recv() {
-                self.handle_message(ctx, msg)?;
-            }
 
             if self.player.is_dead() {
                 println!("Game over!");
