@@ -4,7 +4,6 @@ use ggez::{Context, graphics, GameResult};
 use body::Body;
 use health_bar;
 use constant::ROCK_LIFE;
-use util::world_to_screen_coords;
 use proto::astero;
 
 use ::Movable;

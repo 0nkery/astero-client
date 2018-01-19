@@ -5,7 +5,6 @@ use ggez::{
 };
 
 use body::Body;
-use util::world_to_screen_coords;
 use proto::astero;
 
 use ::Movable;

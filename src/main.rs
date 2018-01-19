@@ -209,6 +209,15 @@ impl<'a, 'b> MainState<'a, 'b> {
         Ok(s)
     }
 
+    fn world_to_screen_coords(&self, ctx: &Context, point: graphics::Point2) -> graphics::Point2 {
+        let width = ctx.conf.window_mode.width as f32;
+        let height = ctx.conf.window_mode.height as f32;
+        let x = point.x + width / 2.0;
+        let y = height - (point.y + height / 2.0);
+
+        graphics::Point2::new(x, y)
+    }
+
     fn handle_collisions(&mut self) {
         for rock in self.asteroids.values_mut() {
 
@@ -388,33 +397,35 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
+        use specs::Join;
+
         graphics::clear(ctx);
 
-        {
-            let coords = (self.screen_width, self.screen_height);
+        let assets = self.world.read_resource::<resources::Assets>();
+        let bodies = self.world.read::<components::Body>();
+        let sprites = self.world.read::<components::Sprite>();
 
-            self.player.draw(ctx, &mut self.assets, coords)?;
+        for (body, sprite) in (&bodies, &sprites).join() {
+            let sprite = assets.get_sprite(&sprite.0);
+            let pos = self.world_to_screen_coords(ctx, body.pos);
 
-            for shot in &self.shots {
-                shot.draw(ctx, &mut self.assets, coords)?;
-            }
-
-            for asteroid in self.asteroids.values() {
-                asteroid.draw(ctx, &mut self.assets, coords)?;
-            }
-
-            for other in self.others.values() {
-                other.draw(ctx, &mut self.assets, coords)?;
-            }
+            graphics::draw_ex(ctx, sprite, graphics::DrawParam {
+                dest: pos,
+                rotation: body.rot,
+                offset: graphics::Point2::new(0.5, 0.5),
+                scale: graphics::Point2::new(
+                    body.size / sprite.width() as f32,
+                    body.size / sprite.height() as f32
+                ),
+                ..Default::default()
+            })?;
         }
 
-         self.health_bar.draw(ctx, self.player.life() / self.player.max_life())?;
+        self.health_bar.draw(ctx, self.player.life() / self.player.max_life())?;
 
-         graphics::present(ctx);
-
-         timer::yield_now();
-
-         Ok(())
+        graphics::present(ctx);
+        timer::yield_now();
+        Ok(())
     }
 
     fn key_down_event(&mut self, ctx: &mut Context, keycode: Keycode, _keymod: Mod, repeat: bool) {

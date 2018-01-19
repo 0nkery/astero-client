@@ -13,10 +13,7 @@ use constant::{
     PLAYER_DECELERATION,
 };
 use health_bar::Sticky;
-use util::{
-    vec_from_angle,
-    world_to_screen_coords,
-};
+use util::vec_from_angle;
 use proto::astero;
 
 use ::Movable;
