@@ -493,7 +493,7 @@ fn main() {
         .window_mode(conf::WindowMode::default().dimensions(800, 600).vsync(true));
 
     let mut path = path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    path.push("resources");
+    path.push("assets");
     cb = cb.add_resource_path(path);
 
     let ctx = &mut cb.build().expect("Failed to build game context");
