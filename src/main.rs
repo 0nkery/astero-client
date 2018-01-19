@@ -86,7 +86,6 @@ use proto::{
     mmob,
     astero,
     astero::Entity,
-    astero::Input,
 };
 
 
@@ -160,45 +159,6 @@ impl Assets {
     }
 }
 
-#[derive(Debug)]
-pub struct InputState {
-    turn: i32,
-    accel: i32,
-    fire: bool,
-}
-
-impl Default for InputState {
-    fn default() -> Self {
-        Self {
-            turn: 0,
-            accel: 0,
-            fire: false,
-        }
-    }
-}
-
-impl InputState {
-    fn update(&mut self, update: &Input) -> bool {
-        let new_turn = update.turn.unwrap_or(self.turn);
-        let new_accel = update.accel.unwrap_or(self.accel);
-        let new_fire = update.fire.unwrap_or(self.fire);
-
-        let updated =
-            new_turn != self.turn
-            || new_accel != self.accel
-            || new_fire != self.fire;
-
-        if updated {
-            self.turn = new_turn;
-            self.accel = new_accel;
-            self.fire = new_fire;
-
-            return true;
-        }
-
-        false
-    }
-}
 
 struct MainState<'a, 'b> {
     player_id: u32,
@@ -208,8 +168,6 @@ struct MainState<'a, 'b> {
 
     shots: Vec<Shot>,
     unconfirmed_shots: HashMap<u32, Shot>,
-
-    input: InputState,
 
     assets: Assets,
     screen_width: u32,
@@ -276,8 +234,6 @@ impl<'a, 'b> MainState<'a, 'b> {
 
             shots: Vec::new(),
             unconfirmed_shots: HashMap::new(),
-
-            input: InputState::default(),
 
             assets,
             screen_width,
@@ -514,80 +470,26 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
          Ok(())
     }
 
-    fn key_down_event(
-        &mut self,
-        ctx: &mut Context,
-        keycode: Keycode,
-        _keymod: Mod,
-        repeat: bool
-    ) {
-        let mut update = Input::default();
+    fn key_down_event(&mut self, ctx: &mut Context, keycode: Keycode, _keymod: Mod, repeat: bool) {
+        if let Keycode::Escape = keycode {
+            ctx.quit().expect("Failed to quit the game");
+            return;
+        }
 
-        let update = match keycode {
-            Keycode::W | Keycode::Up => {
-                update.accel = Some(1);
-                Some(update)
-            }
-            Keycode::S | Keycode::Down => {
-                update.accel = Some(-1);
-                Some(update)
-            }
-            Keycode::A | Keycode::Left => {
-                update.turn = Some(-1);
-                Some(update)
-            }
-            Keycode::D | Keycode::Right => {
-                update.turn = Some(1);
-                Some(update)
-            }
-            Keycode::Space => {
-                update.fire = Some(true);
-                Some(update)
-            }
-            Keycode::Escape => {
-                ctx.quit().expect("Failed to quit the game");
+        let mut input = self.world.write_resource::<resources::Input>();
+        let maybe_update = input.key_down(keycode, repeat);
 
-                None
-            },
-            _ => None,
-        };
-
-        if let Some(update) = update {
-            if self.input.update(&update) {
-                self.client.send(msg::Msg::ToServer(update.into()));
-            }
+        if let Some(update) = maybe_update {
+            self.client.send(msg::Msg::ToServer(update.into()));
         }
     }
 
-    fn key_up_event(
-        &mut self,
-        _ctx: &mut Context,
-        keycode: Keycode,
-        _keymod: Mod,
-        _repeat: bool
-    ) {
-        let mut update = Input::default();
+    fn key_up_event(&mut self, _ctx: &mut Context, keycode: Keycode, _keymod: Mod, _repeat: bool) {
+        let mut input = self.world.write_resource::<resources::Input>();
+        let maybe_update = input.key_up(keycode);
 
-        let update = match keycode {
-            Keycode::W | Keycode::S | Keycode::Up | Keycode::Down => {
-                update.accel = Some(0);
-                Some(update)
-            }
-            Keycode::A | Keycode::D | Keycode::Left | Keycode::Right => {
-                update.turn = Some(0);
-                Some(update)
-            }
-            Keycode::Space => {
-                update.fire = Some(false);
-                Some(update)
-            }
-            _ => None,
-        };
-
-        if let Some(update) = update {
-            if self.input.update(&update) {
-                self.client.send(msg::Msg::ToServer(update.into()));
-            }
+        if let Some(update) = maybe_update {
+            self.client.send(msg::Msg::ToServer(update.into()));
         }
     }
 
