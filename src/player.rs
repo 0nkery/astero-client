@@ -12,7 +12,6 @@ use constant::{
     PLAYER_ACCELERATION,
     PLAYER_DECELERATION,
 };
-use health_bar::Sticky;
 use util::vec_from_angle;
 use proto::astero;
 
@@ -69,53 +68,6 @@ impl Player {
         let dir_vec = vec_from_angle(angle);
         let acceleration = dir_vec * accel_value;
         self.body.vel += acceleration * dt;
-    }
-
-    pub fn draw(&self, ctx: &mut Context, assets: &mut Assets, coords: (u32, u32)) -> GameResult<()> {
-        if self.is_ready() {
-            let (sw, sh) = coords;
-            let pos = graphics::Point2::new(self.body.pos.x, self.body.pos.y);
-            let pos = world_to_screen_coords(sw, sh, pos);
-
-            let image = assets.player_image();
-
-            graphics::draw_ex(
-                ctx,
-                image,
-                graphics::DrawParam {
-                    dest: pos,
-                    rotation: self.body.rot,
-                    offset: graphics::Point2::new(0.5, 0.5),
-                    scale: graphics::Point2::new(
-                        self.body.size / image.width() as f32,
-                        self.body.size / image.height() as f32
-                    ),
-                    .. Default::default()
-                }
-            )?;
-
-            Sticky::draw(
-                ctx, pos, self.body.size,
-                self.life() / self.max_life(),
-                Some(self.color)
-            )?;
-
-            let dest = graphics::Point2::new(
-                pos.x - (self.nickname_display.width() / 2) as f32,
-                pos.y - self.body.size / 2.0 - self.nickname_display.height() as f32,
-            );
-            graphics::draw_ex(
-                ctx,
-                &self.nickname_display,
-                graphics::DrawParam {
-                    dest,
-                    color: Some(self.color),
-                    .. Default::default()
-                }
-            )?;
-        }
-
-        Ok(())
     }
 
     pub fn is_ready(&self) -> bool {

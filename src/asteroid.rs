@@ -1,9 +1,4 @@
-use ggez::{Context, graphics, GameResult};
-
-
 use body::Body;
-use health_bar;
-use constant::ROCK_LIFE;
 use proto::astero;
 
 use ::Movable;
@@ -37,34 +32,6 @@ impl Asteroid {
 
     pub fn update_body(&mut self, body: &astero::Body) {
         self.body.update(body);
-    }
-
-    pub fn draw(&self, ctx: &mut Context, assets: &mut ::Assets, world_coords: (u32, u32)) -> GameResult<()> {
-        let (sw, sh) = world_coords;
-        let pos = world_to_screen_coords(sw, sh, self.body.pos);
-
-        let image = assets.asteroid_image();
-
-        graphics::draw_ex(
-            ctx,
-            image,
-            graphics::DrawParam {
-                dest: pos,
-                offset: graphics::Point2::new(0.5, 0.5),
-                scale: graphics::Point2::new(
-                    self.body.size / image.width() as f32,
-                    self.body.size / image.height() as f32
-                ),
-                .. Default::default()
-            }
-        )?;
-
-        health_bar::Sticky::draw(
-            ctx, pos, self.body.size,
-            self.life / ROCK_LIFE, None
-        )?;
-
-        Ok(())
     }
 }
 

@@ -1,9 +1,3 @@
-use ggez::{
-    graphics,
-    Context,
-    GameResult,
-};
-
 use body::Body;
 use proto::astero;
 
@@ -23,22 +17,6 @@ impl Shot {
             body: Body::new(&shot.body),
             ttl: shot.ttl,
         }
-    }
-
-    pub fn draw(&self, ctx: &mut Context, assets: &mut Assets, world_coords: (u32, u32)) -> GameResult<()> {
-        let (sw, sh) = world_coords;
-
-        graphics::draw_ex(
-            ctx,
-            assets.shot_image(),
-            graphics::DrawParam {
-                dest: world_to_screen_coords(sw, sh, self.body.pos),
-                offset: graphics::Point2::new(0.5, 0.5),
-                .. Default::default()
-            }
-        )?;
-
-        Ok(())
     }
 }
 
