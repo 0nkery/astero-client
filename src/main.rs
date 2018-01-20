@@ -183,9 +183,9 @@ impl<'a, 'b> MainState<'a, 'b> {
 
         let health_bar = health_bar::Static::new(
             10 as f32,
-            screen_height as f32 - constant::gui::HEALTH_BAR_SIZE - 5.0,
+            screen_height as f32 - constant::hud::HEALTH_BAR_SIZE - 5.0,
             (screen_width / 2) as f32,
-            constant::gui::HEALTH_BAR_SIZE
+            constant::hud::HEALTH_BAR_SIZE
         );
 
         let s = Self {

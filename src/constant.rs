@@ -34,7 +34,7 @@ pub mod physics {
     pub const DELTA_TIME: f64 = 0.01;
 }
 
-pub mod gui {
+pub mod hud {
     pub const HEALTH_BAR_SIZE: f32 = 30.0;
     pub const STATIC_HEALTH_BAR_LINE_WIDTH: f32 = 4.0;
 }

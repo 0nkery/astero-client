@@ -5,7 +5,7 @@ use ggez::{
 };
 
 use constant::colors;
-use constant::gui::STATIC_HEALTH_BAR_LINE_WIDTH;
+use constant::hud::STATIC_HEALTH_BAR_LINE_WIDTH;
 
 
 pub struct Static {
