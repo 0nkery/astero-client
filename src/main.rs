@@ -59,8 +59,6 @@ use specs::{
     Dispatcher,
 };
 
-mod health_bar;
-
 mod body;
 use body::Body;
 
@@ -128,11 +126,6 @@ struct MainState<'a, 'b> {
     shots: Vec<Shot>,
     unconfirmed_shots: HashMap<u32, Shot>,
 
-    screen_width: u32,
-    screen_height: u32,
-
-    health_bar: health_bar::Static,
-
     client: resources::Client,
 
     world: World,
@@ -180,15 +173,13 @@ impl<'a, 'b> MainState<'a, 'b> {
         client.send(msg::Msg::JoinGame(nickname));
         println!("Connecting to server...");
 
-        let screen_width = ctx.conf.window_mode.width;
-        let screen_height = ctx.conf.window_mode.height;
-
-        let health_bar = health_bar::Static::new(
-            10 as f32,
-            screen_height as f32 - constant::hud::HEALTH_BAR_SIZE - 5.0,
-            (screen_width / 2) as f32,
-            constant::hud::HEALTH_BAR_SIZE
-        );
+        // TODO: move this code to init fn of current player
+//        let health_bar = health_bar::Static::new(
+//            10 as f32,
+//            screen_height as f32 - constant::hud::HEALTH_BAR_SIZE - 5.0,
+//            (screen_width / 2) as f32,
+//            constant::hud::HEALTH_BAR_SIZE
+//        );
 
         let s = Self {
             player_id: 0,
@@ -198,11 +189,6 @@ impl<'a, 'b> MainState<'a, 'b> {
 
             shots: Vec::new(),
             unconfirmed_shots: HashMap::new(),
-
-            screen_width,
-            screen_height,
-
-            health_bar,
 
             client,
 
@@ -364,8 +350,8 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
         self.time_acc += frame_time;
 
         while self.time_acc > constant::physics::DELTA_TIME {
-            let x_bound = self.screen_width as f32 / 2.0;
-            let y_bound = self.screen_height as f32 / 2.0;
+            let x_bound = ctx.conf.window_mode.width as f32 / 2.0;
+            let y_bound = ctx.conf.window_mode.height as f32 / 2.0;
 
             let seconds = constant::physics::DELTA_TIME as f32;
 
