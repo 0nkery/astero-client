@@ -442,7 +442,12 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
             sticky_health_bar.draw(ctx, pos, body.size, life.fraction(), color.0)?;
         }
 
-        self.health_bar.draw(ctx, self.player.life() / self.player.max_life())?;
+        let static_health_bars = self.world.read::<components::StaticHealthBar>();
+
+        for (body, life, static_health_bar) in (&bodies, &lives, &static_health_bars).join() {
+            let pos = self.world_to_screen_coords(ctx, body.pos);
+            static_health_bar.draw(ctx, life.fraction())?;
+        }
 
         graphics::present(ctx);
         timer::yield_now();
