@@ -157,6 +157,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::Sprite>();
         world.register::<components::Body>();
         world.register::<components::Nickname>();
+        world.register::<components::Color>();
 
         let dispatcher = dispatcher_builder.build();
 
@@ -420,6 +421,14 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
                 ),
                 ..Default::default()
             })?;
+        }
+
+        let nicknames = self.world.read::<components::Nickname>();
+        let colors = self.world.read::<components::Color>();
+
+        for (body, nickname, color) in (&bodies, &nicknames, &colors).join() {
+            let pos = self.world_to_screen_coords(ctx, body.pos);
+            nickname.draw(ctx, body.pos, body.size, color.0);
         }
 
         self.health_bar.draw(ctx, self.player.life() / self.player.max_life())?;
