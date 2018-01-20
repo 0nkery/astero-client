@@ -1,5 +1,5 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
-#![cfg_attr(feature="clippy", feature(clippy))]
+#![cfg_attr(feature="clippy", plugin(clippy))]
 
 #![cfg_attr(feature="clippy", warn(use_self))]
 #![cfg_attr(feature="clippy", warn(wrong_pub_self_convention))]
