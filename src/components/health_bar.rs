@@ -4,8 +4,8 @@ use ggez::{
     GameResult,
 };
 
+use constant::hud::STICKY_HEALTH_BAR_HEIGHT;
 
-const STICKY_HEIGHT: f32 = 3.0;
 
 pub struct Sticky;
 
@@ -24,8 +24,8 @@ impl Sticky {
             ctx, graphics::DrawMode::Fill,
             graphics::Rect::new(
                 pos.x - width / 2.0,
-                pos.y + size / 2.0 + STICKY_HEIGHT,
-                width, STICKY_HEIGHT
+                pos.y + size / 2.0 + STICKY_HEALTH_BAR_HEIGHT,
+                width, STICKY_HEALTH_BAR_HEIGHT
             )
         )?;
 

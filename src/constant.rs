@@ -37,4 +37,5 @@ pub mod physics {
 pub mod hud {
     pub const HEALTH_BAR_SIZE: f32 = 30.0;
     pub const STATIC_HEALTH_BAR_LINE_WIDTH: f32 = 4.0;
+    pub const STICKY_HEALTH_BAR_HEIGHT: f32 = 3.0;
 }
