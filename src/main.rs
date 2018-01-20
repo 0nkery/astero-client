@@ -158,6 +158,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::Body>();
         world.register::<components::Nickname>();
         world.register::<components::Color>();
+        world.register::<components::Life>();
 
         let dispatcher = dispatcher_builder.build();
 
