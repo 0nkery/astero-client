@@ -431,7 +431,15 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
         for (body, nickname, color) in (&bodies, &nicknames, &colors).join() {
             let pos = self.world_to_screen_coords(ctx, body.pos);
-            nickname.draw(ctx, body.pos, body.size, color.0);
+            nickname.draw(ctx, body.pos, body.size, color.0)?;
+        }
+
+        let lives = self.world.read::<components::Life>();
+        let sticky_health_bars = self.world.read::<components::StickyHealthBar>();
+
+        for (body, life, color, sticky_health_bar) in (&bodies, &lives, &colors, &sticky_health_bars).join() {
+            let pos = self.world_to_screen_coords(ctx, body.pos);
+            sticky_health_bar.draw(ctx, pos, body.size, life.fraction(), color.0)?;
         }
 
         self.health_bar.draw(ctx, self.player.life() / self.player.max_life())?;
