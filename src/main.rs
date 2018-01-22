@@ -145,7 +145,6 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.add_resource(resources::ServerClock::new());
         world.add_resource(resources::Assets::new(ctx)?);
         world.add_resource(resources::PlayerId(None));
-        world.add_resource(resources::MsgQueue);
 
         world.register::<components::Sprite>();
         world.register::<components::Body>();
@@ -156,7 +155,6 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::StaticHealthBar>();
 
         let dispatcher = DispatcherBuilder::new()
-            .add(systems::Network, "Network", &[])
             .build();
 
         let home_dir = env::home_dir().expect("Failed to retrieve home dir");
@@ -229,7 +227,6 @@ impl<'a, 'b> MainState<'a, 'b> {
     }
 
     fn init_player(&mut self, this: &proto::astero::Player) {
-        // TODO: refactor this code into Network system
 //        println!("Connected to server. Conn ID - {}", this.id);
 //        self.player_id = this.id;
 //        self.player.set_body(&this.body);
