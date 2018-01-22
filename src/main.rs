@@ -375,13 +375,6 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
                 rock.wrap_position(x_bound, y_bound);
             }
 
-            self.handle_collisions();
-
-            if self.player.is_dead() {
-                println!("Game over!");
-                ctx.quit()?;
-            }
-
             self.dispatcher.dispatch(&self.world.res);
             self.time_acc -= constant::physics::DELTA_TIME;
         }
