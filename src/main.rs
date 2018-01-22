@@ -118,7 +118,6 @@ trait Destroyable {
 
 
 struct MainState<'a, 'b> {
-    player_id: u32,
     player: Player,
     asteroids: HashMap<u32, Asteroid>,
     others: HashMap<u32, Player>,
@@ -185,7 +184,6 @@ impl<'a, 'b> MainState<'a, 'b> {
 //        );
 
         let s = Self {
-            player_id: 0,
             player,
             asteroids: HashMap::new(),
             others: HashMap::new(),
@@ -231,9 +229,10 @@ impl<'a, 'b> MainState<'a, 'b> {
     }
 
     fn init_player(&mut self, this: &proto::astero::Player) {
-        println!("Connected to server. Conn ID - {}", this.id);
-        self.player_id = this.id;
-        self.player.set_body(&this.body);
+        // TODO: refactor this code into Network system
+//        println!("Connected to server. Conn ID - {}", this.id);
+//        self.player_id = this.id;
+//        self.player.set_body(&this.body);
     }
 
     fn create_entity(&mut self, ctx: &mut Context, entity: astero::create::Entity) -> GameResult<()> {
