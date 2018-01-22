@@ -51,3 +51,14 @@ pub fn cur_time_in_millis() -> u64 {
 
     millis as u64
 }
+
+pub fn cur_user_name() -> String {
+    std::env::home_dir()
+        .expect("Failed to retrieve home dir")
+        .as_path()
+        .file_name()
+        .expect("Failed to retrieve username")
+        .to_str()
+        .expect("Failed to convert username to Unicode")
+        .to_string()
+}

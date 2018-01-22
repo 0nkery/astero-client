@@ -42,7 +42,6 @@ extern crate prost;
 #[macro_use] extern crate prost_derive;
 
 use std::collections::HashMap;
-use std::env;
 use std::path;
 
 use ggez::{
@@ -152,19 +151,12 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::Life>();
         world.register::<components::StickyHealthBar>();
         world.register::<components::StaticHealthBar>();
+        world.register::<components::Controllable>();
 
         let dispatcher = DispatcherBuilder::new()
             .build();
 
-        let home_dir = env::home_dir().expect("Failed to retrieve home dir");
-        let nickname =
-            home_dir
-                .as_path()
-                .file_name()
-                .expect("Failed to retrieve username")
-                .to_str()
-                .expect("Failed to convert username to Unicode")
-                .to_string();
+        let nickname = util::cur_user_name();
 
 //        let player = Player::new(ctx, nickname.clone(), &assets.small_font, constant::colors::GREEN)?;
 
@@ -225,8 +217,8 @@ impl<'a, 'b> MainState<'a, 'b> {
 //        }
 //    }
 
-    fn init_player(&mut self, this: &proto::astero::Player) {
-        println!("Connected to server. Conn ID - {}", this.id);
+    fn init_player(&mut self, controllable_player: &proto::astero::Player) {
+        println!("Connected to server. Conn ID - {}", controllable_player.id);
     }
 
     fn create_entity(&mut self, ctx: &mut Context, entity: astero::create::Entity) -> GameResult<()> {

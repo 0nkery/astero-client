@@ -1,5 +1,6 @@
 mod body;
 mod color;
+mod controllable;
 mod health_bar;
 mod life;
 mod nickname;
@@ -7,6 +8,7 @@ mod sprite;
 
 pub use self::body::Body;
 pub use self::color::Color;
+pub use self::controllable::Controllable;
 pub use self::{
     health_bar::Sticky as StickyHealthBar,
     health_bar::Static as StaticHealthBar,
