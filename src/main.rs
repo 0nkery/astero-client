@@ -145,6 +145,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.add_resource(resources::Input::new());
         world.add_resource(resources::ServerClock::new());
         world.add_resource(resources::Assets::new(ctx)?);
+        world.add_resource(resources::PlayerId(None));
 
         world.register::<components::Sprite>();
         world.register::<components::Body>();
