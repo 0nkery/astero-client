@@ -118,7 +118,6 @@ trait Destroyable {
 
 
 struct MainState<'a, 'b> {
-    player: Player,
     asteroids: HashMap<u32, Asteroid>,
     others: HashMap<u32, Player>,
 
@@ -167,7 +166,7 @@ impl<'a, 'b> MainState<'a, 'b> {
                 .expect("Failed to convert username to Unicode")
                 .to_string();
 
-        let player = Player::new(ctx, nickname.clone(), &assets.small_font, constant::colors::GREEN)?;
+//        let player = Player::new(ctx, nickname.clone(), &assets.small_font, constant::colors::GREEN)?;
 
         let client = resources::Client::start();
         client.send(msg::Msg::JoinGame(nickname));
@@ -182,7 +181,6 @@ impl<'a, 'b> MainState<'a, 'b> {
 //        );
 
         let s = Self {
-            player,
             asteroids: HashMap::new(),
             others: HashMap::new(),
 
@@ -208,28 +206,27 @@ impl<'a, 'b> MainState<'a, 'b> {
         graphics::Point2::new(x, y)
     }
 
-    fn handle_collisions(&mut self) {
-        for rock in self.asteroids.values_mut() {
-
-            if self.player.collided(rock) {
-                self.player.damage(1.0);
-                rock.destroy();
-                continue;
-            }
-
-            for shot in &mut self.shots {
-                if shot.collided(rock) {
-                    shot.destroy();
-                    rock.damage(1.0);
-                }
-            }
-        }
-    }
+    // TODO: move to server
+//    fn handle_collisions(&mut self) {
+//        for rock in self.asteroids.values_mut() {
+//
+//            if self.player.collided(rock) {
+//                self.player.damage(1.0);
+//                rock.destroy();
+//                continue;
+//            }
+//
+//            for shot in &mut self.shots {
+//                if shot.collided(rock) {
+//                    shot.destroy();
+//                    rock.damage(1.0);
+//                }
+//            }
+//        }
+//    }
 
     fn init_player(&mut self, this: &proto::astero::Player) {
-//        println!("Connected to server. Conn ID - {}", this.id);
-//        self.player_id = this.id;
-//        self.player.set_body(&this.body);
+        println!("Connected to server. Conn ID - {}", this.id);
     }
 
     fn create_entity(&mut self, ctx: &mut Context, entity: astero::create::Entity) -> GameResult<()> {
@@ -349,29 +346,6 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
         self.time_acc += frame_time;
 
         while self.time_acc > constant::physics::DELTA_TIME {
-            let x_bound = ctx.conf.window_mode.width as f32 / 2.0;
-            let y_bound = ctx.conf.window_mode.height as f32 / 2.0;
-
-            let seconds = constant::physics::DELTA_TIME as f32;
-
-            self.player.update_position(seconds);
-            self.player.wrap_position(x_bound, y_bound);
-
-            for player in self.others.values_mut() {
-                player.update_position(seconds);
-                player.wrap_position(x_bound, y_bound);
-            }
-
-            for shot in &mut self.shots {
-                shot.update_position(seconds);
-                shot.wrap_position(x_bound, y_bound);
-            }
-
-            for rock in self.asteroids.values_mut() {
-                rock.update_position(seconds);
-                rock.wrap_position(x_bound, y_bound);
-            }
-
             self.dispatcher.dispatch(&self.world.res);
             self.time_acc -= constant::physics::DELTA_TIME;
         }
