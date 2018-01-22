@@ -16,8 +16,8 @@ pub enum SpriteKind {
 
 pub struct Assets {
     sprites: BTreeMap<SpriteKind, graphics::Image>,
-    font: graphics::Font,
-    small_font: graphics::Font,
+    pub font: graphics::Font,
+    pub small_font: graphics::Font,
 }
 
 impl Assets {

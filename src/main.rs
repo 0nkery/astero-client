@@ -142,7 +142,6 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.add_resource(resources::Input::new());
         world.add_resource(resources::ServerClock::new());
         world.add_resource(resources::Assets::new(ctx)?);
-        world.add_resource(resources::PlayerId(None));
 
         world.register::<components::Sprite>();
         world.register::<components::Body>();
@@ -152,25 +151,16 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::StickyHealthBar>();
         world.register::<components::StaticHealthBar>();
         world.register::<components::Controllable>();
+        world.register::<components::NetworkId>();
 
         let dispatcher = DispatcherBuilder::new()
             .build();
 
         let nickname = util::cur_user_name();
 
-//        let player = Player::new(ctx, nickname.clone(), &assets.small_font, constant::colors::GREEN)?;
-
         let client = resources::Client::start();
         client.send(msg::Msg::JoinGame(nickname));
         println!("Connecting to server...");
-
-        // TODO: move this code to init fn of current player
-//        let health_bar = health_bar::Static::new(
-//            10 as f32,
-//            screen_height as f32 - constant::hud::HEALTH_BAR_SIZE - 5.0,
-//            (screen_width / 2) as f32,
-//            constant::hud::HEALTH_BAR_SIZE
-//        );
 
         let s = Self {
             asteroids: HashMap::new(),
@@ -196,52 +186,6 @@ impl<'a, 'b> MainState<'a, 'b> {
         let y = height - (point.y + height / 2.0);
 
         graphics::Point2::new(x, y)
-    }
-
-    // TODO: move to server
-//    fn handle_collisions(&mut self) {
-//        for rock in self.asteroids.values_mut() {
-//
-//            if self.player.collided(rock) {
-//                self.player.damage(1.0);
-//                rock.destroy();
-//                continue;
-//            }
-//
-//            for shot in &mut self.shots {
-//                if shot.collided(rock) {
-//                    shot.destroy();
-//                    rock.damage(1.0);
-//                }
-//            }
-//        }
-//    }
-
-    fn init_player(&mut self, controllable_player: &proto::astero::Player) {
-        println!("Connected to server. Conn ID - {}", controllable_player.id);
-    }
-
-    fn create_entity(&mut self, ctx: &mut Context, entity: astero::create::Entity) -> GameResult<()> {
-        match entity {
-            astero::create::Entity::Player(other) => {
-                let nickname = other.nickname
-                    .expect("Missing nickname on remote player");
-
-                let mut player = Player::new(
-                    ctx, nickname, &self.assets.small_font, constant::colors::RED
-                )?;
-                player.set_body(&other.body);
-                self.others.insert(other.id, player);
-            }
-            astero::create::Entity::Asteroid(ref asteroid) => {
-                self.asteroids.insert(asteroid.id, Asteroid::new(asteroid));
-            }
-            astero::create::Entity::Shot(ref shot) => {
-                self.shots.push(Shot::new(shot));
-            }
-        }
-
-        Ok(())
     }
 
     fn destroy_entity(&mut self, entity: &proto::astero::Destroy) {
@@ -276,14 +220,62 @@ impl<'a, 'b> MainState<'a, 'b> {
     }
 
     fn handle_message(&mut self, ctx: &mut Context, msg: msg::Msg) -> GameResult<()> {
+
+
         match msg {
-            msg::Msg::JoinAck(ref this_player) => self.init_player(this_player),
+            msg::Msg::JoinAck(cur_player) => {
+                let entity = self.world.create_entity();
+                let assets = self.world.read_resource::<resources::Assets>();
+
+                entity.with(components::Body::new(&cur_player.body))
+                    .with(components::Color(constant::colors::GREEN))
+                    .with(components::Life::new(cur_player.life.expect("Got empty life from server")))
+                    .with(components::StaticHealthBar::new(
+                        10 as f32,
+                        ctx.conf.window_mode.height as f32 - constant::hud::HEALTH_BAR_SIZE - 5.0,
+                        (ctx.conf.window_mode.width / 2) as f32,
+                        constant::hud::HEALTH_BAR_SIZE))
+                    .with(components::StickyHealthBar {})
+                    .with(components::Sprite(resources::SpriteKind::Player))
+                    .with(components::Nickname::new(
+                        ctx,
+                        &cur_player.nickname.expect("Got empty nickname from server"),
+                        &assets.small_font)?)
+                    .with(components::Controllable {})
+                    .with(components::NetworkId(cur_player.id))
+                    .build();
+            },
 
             msg::Msg::FromServer(msg) => {
                 match msg {
                     astero::server::Msg::Create(create) => {
                         let entity = create.entity.expect("Got empty create entity from server");
-                        self.create_entity(ctx, entity)?
+
+                        match entity {
+                            astero::create::Entity::Player(other) => {
+                                let assets = self.world.read_resource::<resources::Assets>();
+
+                                self.world.create_entity()
+                                    .with(components::Body::new(&other.body))
+                                    .with(components::Color(constant::colors::RED))
+                                    .with(components::Life::new(other.life.expect("Got empty life from server")))
+                                    .with(components::StickyHealthBar {})
+                                    .with(components::Sprite(resources::SpriteKind::Player))
+                                    .with(components::Nickname::new (
+                                        ctx,
+                                        &other.nickname.expect("Got empty nickname from server"),
+                                        &assets.small_font
+                                    )?)
+                                    .with(components::NetworkId(other.id))
+                                    .build();
+                            }
+                            astero::create::Entity::Asteroid(ref asteroid) => {
+                                self.asteroids.insert(asteroid.id, Asteroid::new(asteroid));
+                            }
+                            astero::create::Entity::Shot(ref shot) => {
+                                self.shots.push(Shot::new(shot));
+                            }
+                        }
                     }
                     astero::server::Msg::Destroy(ref entity) => self.destroy_entity(entity),
                     astero::server::Msg::List(updates) => {

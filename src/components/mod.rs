@@ -3,6 +3,7 @@ mod color;
 mod controllable;
 mod health_bar;
 mod life;
+mod network_id;
 mod nickname;
 mod sprite;
 
@@ -14,5 +15,6 @@ pub use self::{
     health_bar::Static as StaticHealthBar,
 };
 pub use self::life::Life;
+pub use self::network_id::NetworkId;
 pub use self::nickname::Nickname;
 pub use self::sprite::Sprite;
