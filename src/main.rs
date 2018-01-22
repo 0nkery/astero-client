@@ -141,7 +141,6 @@ impl<'a, 'b> MainState<'a, 'b> {
         print_instructions();
 
         let mut world = World::new();
-        let mut dispatcher_builder = DispatcherBuilder::new();
 
         world.add_resource(resources::Input::new());
         world.add_resource(resources::ServerClock::new());
@@ -155,7 +154,9 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::StickyHealthBar>();
         world.register::<components::StaticHealthBar>();
 
-        let dispatcher = dispatcher_builder.build();
+        let dispatcher = DispatcherBuilder::new()
+            .add(systems::Network, "Network", &[])
+            .build();
 
         let home_dir = env::home_dir().expect("Failed to retrieve home dir");
         let nickname =
