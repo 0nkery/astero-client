@@ -79,10 +79,7 @@ mod msg;
 mod proto;
 mod util;
 
-use proto::{
-    astero,
-    astero::Entity,
-};
+use proto::astero;
 
 
 trait Movable {
@@ -152,6 +149,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::StaticHealthBar>();
         world.register::<components::Controllable>();
         world.register::<components::NetworkId>();
+        world.register::<components::TimeToLive>();
 
         let dispatcher = DispatcherBuilder::new()
             .build();
@@ -189,40 +187,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         graphics::Point2::new(x, y)
     }
 
-    fn destroy_entity(&mut self, entity: &proto::astero::Destroy) {
-        let kind = Entity::from_i32(entity.entity).expect("Missing entity on Destroy");
-        match kind {
-            Entity::Unknown => {},
-            Entity::Player => {
-                let player = self.others.remove(&entity.id);
-                if let Some(player) = player {
-                    println!("Player disconnected. ID - {}, nickname - {}", entity.id, player.nickname());
-                }
-            }
-            Entity::Asteroid => {
-                self.asteroids.remove(&entity.id);
-            }
-        }
-    }
-
-    fn update_entity(&mut self, entity: astero::update::Entity) {
-        match entity {
-            astero::update::Entity::Player(player) => {
-                self.others
-                    .entry(player.id)
-                    .and_modify(|p| p.update_body(&player.body));
-            }
-            astero::update::Entity::Asteroid(asteroid) => {
-                self.asteroids
-                    .entry(asteroid.id)
-                    .and_modify(|a| a.update_body(&asteroid.body));
-            }
-        }
-    }
-
     fn handle_message(&mut self, ctx: &mut Context, msg: msg::Msg) -> GameResult<()> {
-
-
         match msg {
             msg::Msg::JoinAck(cur_player) => {
                 self.world.create_entity()
@@ -267,19 +232,29 @@ impl<'a, 'b> MainState<'a, 'b> {
                                     .build();
                             }
                             astero::create::Entity::Asteroid(ref asteroid) => {
-                                self.asteroids.insert(asteroid.id, Asteroid::new(asteroid));
+                                self.world.create_entity()
+                                    .with(components::Body::new(&asteroid.body))
+                                    .with(components::Color(constant::colors::RED))
+                                    .with(components::Life::new(asteroid.life.expect("Got empty life from server")))
+                                    .with(components::StickyHealthBar {})
+                                    .with(components::Sprite(resources::SpriteKind::Asteroid))
+                                    .with(components::NetworkId(asteroid.id))
+                                    .build();
                             }
                             astero::create::Entity::Shot(ref shot) => {
-                                self.shots.push(Shot::new(shot));
+                                self.world.create_entity()
+                                    .with(components::Body::new(&shot.body))
+                                    .with(components::Sprite(resources::SpriteKind::Shot))
+                                    .with(components::TimeToLive::new(shot.ttl))
+                                    .build();
                             }
                         }
                     }
-                    astero::server::Msg::Destroy(ref entity) => self.destroy_entity(entity),
+                    astero::server::Msg::Destroy(ref entity) => {
+                        // TODO: find and remove entity by NetworkId
+                    },
                     astero::server::Msg::List(updates) => {
-                        for update in updates.update_list {
-                            let entity = update.entity.expect("Got empty update entity from server");
-                            self.update_entity(entity);
-                        }
+                        // TODO: figure out how to update entities
                     },
                 }
             }

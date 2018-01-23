@@ -16,3 +16,17 @@ impl Life {
         self.cur / self.max
     }
 }
+
+
+#[derive(Component, Debug)]
+pub struct TimeToLive {
+    ttl: f32
+}
+
+impl TimeToLive {
+    pub fn new(ttl: f32) -> Self {
+        Self {
+            ttl
+        }
+    }
+}
