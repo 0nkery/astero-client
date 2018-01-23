@@ -123,6 +123,7 @@ struct MainState<'a, 'b> {
     shots: Vec<Shot>,
     unconfirmed_shots: HashMap<u32, Shot>,
 
+    assets: resources::Assets,
     client: resources::Client,
 
     world: World,
@@ -141,7 +142,6 @@ impl<'a, 'b> MainState<'a, 'b> {
 
         world.add_resource(resources::Input::new());
         world.add_resource(resources::ServerClock::new());
-        world.add_resource(resources::Assets::new(ctx)?);
 
         world.register::<components::Sprite>();
         world.register::<components::Body>();
@@ -169,6 +169,7 @@ impl<'a, 'b> MainState<'a, 'b> {
             shots: Vec::new(),
             unconfirmed_shots: HashMap::new(),
 
+            assets: resources::Assets::new(ctx)?,
             client,
 
             world,
@@ -224,10 +225,8 @@ impl<'a, 'b> MainState<'a, 'b> {
 
         match msg {
             msg::Msg::JoinAck(cur_player) => {
-                let entity = self.world.create_entity();
-                let assets = self.world.read_resource::<resources::Assets>();
-
-                entity.with(components::Body::new(&cur_player.body))
+                self.world.create_entity()
+                    .with(components::Body::new(&cur_player.body))
                     .with(components::Color(constant::colors::GREEN))
                     .with(components::Life::new(cur_player.life.expect("Got empty life from server")))
                     .with(components::StaticHealthBar::new(
@@ -240,7 +239,7 @@ impl<'a, 'b> MainState<'a, 'b> {
                     .with(components::Nickname::new(
                         ctx,
                         &cur_player.nickname.expect("Got empty nickname from server"),
-                        &assets.small_font)?)
+                        &self.assets.small_font)?)
                     .with(components::Controllable {})
                     .with(components::NetworkId(cur_player.id))
                     .build();
@@ -253,8 +252,6 @@ impl<'a, 'b> MainState<'a, 'b> {
 
                         match entity {
                             astero::create::Entity::Player(other) => {
-                                let assets = self.world.read_resource::<resources::Assets>();
-
                                 self.world.create_entity()
                                     .with(components::Body::new(&other.body))
                                     .with(components::Color(constant::colors::RED))
@@ -264,7 +261,7 @@ impl<'a, 'b> MainState<'a, 'b> {
                                     .with(components::Nickname::new (
                                         ctx,
                                         &other.nickname.expect("Got empty nickname from server"),
-                                        &assets.small_font
+                                        &self.assets.small_font
                                     )?)
                                     .with(components::NetworkId(other.id))
                                     .build();
