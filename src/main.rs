@@ -251,7 +251,7 @@ impl<'a, 'b> MainState<'a, 'b> {
                         }
                     }
                     astero::server::Msg::Destroy(ref entity) => {
-                        // TODO: find and remove entity by NetworkId
+
                     },
                     astero::server::Msg::List(updates) => {
                         // TODO: figure out how to update entities
@@ -314,12 +314,11 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
         graphics::clear(ctx);
 
-        let assets = self.world.read_resource::<resources::Assets>();
         let bodies = self.world.read::<components::Body>();
         let sprites = self.world.read::<components::Sprite>();
 
         for (body, sprite) in (&bodies, &sprites).join() {
-            let sprite = assets.get_sprite(&sprite.0);
+            let sprite = self.assets.get_sprite(&sprite.0);
             let pos = self.world_to_screen_coords(ctx, body.pos);
 
             graphics::draw_ex(ctx, sprite, graphics::DrawParam {
