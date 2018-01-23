@@ -250,8 +250,21 @@ impl<'a, 'b> MainState<'a, 'b> {
                             }
                         }
                     }
-                    astero::server::Msg::Destroy(ref entity) => {
+                    astero::server::Msg::Destroy(entity_to_destroy) => {
+                        use specs::Join;
 
+                        let entity = {
+                            let entities = self.world.entities();
+                            let network_ids = self.world.read::<components::NetworkId>();
+
+                            (&*entities, &network_ids).join()
+                                .find(|&(entity, network_id)| entity_to_destroy.id == network_id.0)
+                                .map(|(entity, _)| entity)
+                        };
+
+                        if let Some(entity) = entity {
+                            self.world.delete_entity(entity);
+                        }
                     },
                     astero::server::Msg::List(updates) => {
                         // TODO: figure out how to update entities
