@@ -238,7 +238,8 @@ impl<'a, 'b> MainState<'a, 'b> {
                         };
 
                         if let Some(entity) = entity {
-                            let _res = self.world.delete_entity(entity);
+                            self.world.delete_entity(entity)
+                                .expect("Deleting already deleted entity?!");
                         }
                     },
                     astero::server::Msg::List(updates) => {
