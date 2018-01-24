@@ -23,8 +23,9 @@ pub mod colors {
     };
 }
 
-pub const PLAYER_LIFE: f32 = 3.0;
-pub const ROCK_LIFE: f32 = 2.0;
+// TODO: move to server
+//pub const PLAYER_LIFE: f32 = 3.0;
+//pub const ROCK_LIFE: f32 = 2.0;
 
 pub const PLAYER_ACCELERATION: f32 = 60.0;
 pub const PLAYER_DECELERATION: f32 = 10.0;

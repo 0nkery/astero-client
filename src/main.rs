@@ -41,7 +41,6 @@ extern crate bytes;
 extern crate prost;
 #[macro_use] extern crate prost_derive;
 
-use std::collections::HashMap;
 use std::path;
 
 use ggez::{
@@ -58,18 +57,6 @@ use specs::{
     Dispatcher,
 };
 
-mod body;
-use body::Body;
-
-mod player;
-use player::Player;
-
-mod asteroid;
-use asteroid::Asteroid;
-
-mod shot;
-use shot::Shot;
-
 mod components;
 mod resources;
 mod systems;
@@ -81,45 +68,18 @@ mod util;
 
 use proto::astero;
 
-
-trait Movable {
-    fn update_position(&mut self, dt: f32);
-    fn wrap_position(&mut self, sx: f32, sy: f32);
-    fn get_body(&self) -> &Body;
-
-    fn collided<M: Movable>(&mut self, other: &M) -> bool {
-        let self_body = self.get_body();
-        let other_body = other.get_body();
-
-        let distance = ggez::nalgebra::distance(&self_body.pos, &other_body.pos);
-
-        distance < (self_body.size / 2.0 + other_body.size / 2.0)
-    }
-}
-
-
-trait Destroyable {
-    fn is_dead(&self) -> bool {
-        self.life() <= 0.0
-    }
-
-    fn is_alive(&self) -> bool {
-        !self.is_dead()
-    }
-
-    fn life(&self) -> f32;
-    fn damage(&mut self, amount: f32);
-    fn destroy(&mut self);
-}
+// TODO: move to the server
+//    fn collided<M: Movable>(&mut self, other: &M) -> bool {
+//        let self_body = self.get_body();
+//        let other_body = other.get_body();
+//
+//        let distance = ggez::nalgebra::distance(&self_body.pos, &other_body.pos);
+//
+//        distance < (self_body.size / 2.0 + other_body.size / 2.0)
+//    }
 
 
 struct MainState<'a, 'b> {
-    asteroids: HashMap<u32, Asteroid>,
-    others: HashMap<u32, Player>,
-
-    shots: Vec<Shot>,
-    unconfirmed_shots: HashMap<u32, Shot>,
-
     assets: resources::Assets,
     client: resources::Client,
 
@@ -161,17 +121,12 @@ impl<'a, 'b> MainState<'a, 'b> {
         println!("Connecting to server...");
 
         let s = Self {
-            asteroids: HashMap::new(),
-            others: HashMap::new(),
-
-            shots: Vec::new(),
-            unconfirmed_shots: HashMap::new(),
-
             assets: resources::Assets::new(ctx)?,
             client,
 
             world,
             dispatcher,
+
             time_acc: 0.0,
         };
 
@@ -258,12 +213,12 @@ impl<'a, 'b> MainState<'a, 'b> {
                             let network_ids = self.world.read::<components::NetworkId>();
 
                             (&*entities, &network_ids).join()
-                                .find(|&(entity, network_id)| entity_to_destroy.id == network_id.0)
-                                .map(|(entity, _)| entity)
+                                .find(|&(_entity, network_id)| entity_to_destroy.id == network_id.0)
+                                .map(|(entity, _network_id)| entity)
                         };
 
                         if let Some(entity) = entity {
-                            self.world.delete_entity(entity);
+                            let _res = self.world.delete_entity(entity);
                         }
                     },
                     astero::server::Msg::List(updates) => {
@@ -351,7 +306,7 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
         for (body, nickname, color) in (&bodies, &nicknames, &colors).join() {
             let pos = self.world_to_screen_coords(ctx, body.pos);
-            nickname.draw(ctx, body.pos, body.size, color.0)?;
+            nickname.draw(ctx, pos, body.size, color.0)?;
         }
 
         let lives = self.world.read::<components::Life>();
@@ -364,8 +319,7 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
         let static_health_bars = self.world.read::<components::StaticHealthBar>();
 
-        for (body, life, static_health_bar) in (&bodies, &lives, &static_health_bars).join() {
-            let pos = self.world_to_screen_coords(ctx, body.pos);
+        for (life, static_health_bar) in (&lives, &static_health_bars).join() {
             static_health_bar.draw(ctx, life.fraction())?;
         }
 
