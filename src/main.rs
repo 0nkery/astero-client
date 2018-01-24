@@ -89,6 +89,7 @@ struct MainState<'a, 'b> {
 
     time_acc: f64,
     last_server_update_timestamp: u64,
+    player_id: i64,
 }
 
 impl<'a, 'b> MainState<'a, 'b> {
@@ -101,6 +102,7 @@ impl<'a, 'b> MainState<'a, 'b> {
 
         world.add_resource(resources::Input::new());
         world.add_resource(resources::ServerClock::new());
+        world.add_resource(resources::DeltaTime(0.0));
 
         world.register::<components::Sprite>();
         world.register::<components::Body>();
@@ -123,15 +125,16 @@ impl<'a, 'b> MainState<'a, 'b> {
         println!("Connecting to server...");
 
         let s = Self {
-            assets: resources::Assets::new(ctx)?,
-            client,
-
             world,
             dispatcher,
 
-            time_acc: 0.0,
+            assets: resources::Assets::new(ctx)?,
+            client,
             pending_inputs: resources::InputBuffer::new(),
+
+            time_acc: 0.0,
             last_server_update_timestamp: 0,
+            player_id: -1,
         };
 
         Ok(s)
@@ -147,24 +150,19 @@ impl<'a, 'b> MainState<'a, 'b> {
     }
 
     fn update_input(&mut self, cur_input: resources::Input, maybe_update: Option<proto::astero::Input>) {
-        use specs::Join;
-
         if let Some(mut update) = maybe_update {
-            let bodies = self.world.read::<components::Body>();
-            let controllable = self.world.read::<components::Controllable>();
-
-            let (body, _controllable) = (&bodies, &controllable).join().next()
-                .expect("Controllable player not found?!");
-
-            update.sequence_num = self.pending_inputs.add(cur_input, body.clone());
-
+            update.sequence_num = self.pending_inputs.add(cur_input);
             self.client.send(msg::Msg::ToServer(update.into()));
         }
     }
 
     fn handle_message(&mut self, ctx: &mut Context, msg: msg::Msg) -> GameResult<()> {
+        use specs::Join;
+
         match msg {
             msg::Msg::JoinAck(cur_player) => {
+                self.player_id = i64::from(cur_player.id);
+
                 self.world.create_entity()
                     .with(components::Body::new(&cur_player.body))
                     .with(components::Color(constant::colors::GREEN))
@@ -226,8 +224,6 @@ impl<'a, 'b> MainState<'a, 'b> {
                         }
                     }
                     astero::server::Msg::Destroy(entity_to_destroy) => {
-                        use specs::Join;
-
                         let entity = {
                             let entities = self.world.entities();
                             let network_ids = self.world.read::<components::NetworkId>();
@@ -246,10 +242,50 @@ impl<'a, 'b> MainState<'a, 'b> {
                         if updates.timestamp < self.last_server_update_timestamp {
                             return Ok(());
                         }
-
                         self.last_server_update_timestamp = updates.timestamp;
 
-                        // TODO: figure out how to update entities
+                        for update in updates.update_list {
+                            let entity = update.entity.expect("Got empty entity update from server");
+                            match entity {
+                                astero::update::Entity::Player(player) => {
+                                    if self.player_id == i64::from(player.id) {
+                                        let mut bodies = self.world.write::<components::Body>();
+                                        let controllable = self.world.read::<components::Controllable>();
+
+                                        let (body, _) = (&mut bodies, &controllable).join().next()
+                                            .expect("Controllable player not found?!");
+                                        *body = components::Body::new(&player.body);
+
+                                        let last_handled_input = player.last_handled_input
+                                            .expect("Got empty last handled input from server");
+
+                                        let (handled_input, pending_inputs) = self.pending_inputs.get_state_after(last_handled_input);
+
+                                        let mut delta_start_timestamp = handled_input.timestamp;
+
+                                        for pending in pending_inputs {
+                                            {
+                                                let mut delta_time = self.world.write_resource::<resources::DeltaTime>();
+                                                delta_time.0 = (pending.timestamp - delta_start_timestamp) as f64 / 1000.0;
+                                            }
+
+                                            {
+                                                let mut input = self.world.write_resource::<resources::Input>();
+                                                *input = pending.input.clone();
+                                            }
+
+                                            self.dispatcher.dispatch(&self.world.res);
+                                            delta_start_timestamp = pending.timestamp;
+                                        }
+                                    } else {
+
+                                    }
+                                }
+                                astero::update::Entity::Asteroid(asteroid) => {
+
+                                }
+                            }
+                        }
                     },
                 }
             }
@@ -295,6 +331,11 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
         let frame_time = timer::duration_to_f64(frame_time);
 
         self.time_acc += frame_time;
+
+        {
+            let mut delta_time = self.world.write_resource::<resources::DeltaTime>();
+            delta_time.0 = constant::physics::DELTA_TIME;
+        }
 
         while self.time_acc > constant::physics::DELTA_TIME {
             self.dispatcher.dispatch(&self.world.res);

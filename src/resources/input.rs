@@ -2,7 +2,6 @@ use std::collections::VecDeque;
 
 use ggez::event::Keycode;
 
-use components::Body;
 use proto::astero;
 use util::cur_time_in_millis;
 
@@ -103,9 +102,8 @@ impl Input {
 
 pub struct PendingInput {
     sequence_number: u32,
-    timestamp: u64,
-    input: Input,
-    body: Body,
+    pub timestamp: u64,
+    pub input: Input,
 }
 
 pub struct InputBuffer {
@@ -121,24 +119,26 @@ impl InputBuffer {
         }
     }
 
-    pub fn add(&mut self, input: Input, body: Body) -> u32 {
+    pub fn add(&mut self, input: Input) -> u32 {
         self.sequence_number = self.sequence_number.wrapping_add(1);
 
         self.buf.push_back(PendingInput {
             sequence_number: self.sequence_number,
             timestamp: cur_time_in_millis(),
             input,
-            body,
         });
 
         self.sequence_number
     }
 
-    pub fn get_state_after(&mut self, sequence_number: u32) -> impl Iterator<Item=&PendingInput> {
-        while self.buf[0].sequence_number <= sequence_number {
+    pub fn get_state_after(&mut self, sequence_number: u32) -> (PendingInput, impl Iterator<Item=&PendingInput>) {
+        while self.buf[0].sequence_number < sequence_number {
             self.buf.pop_front();
         }
 
-        self.buf.iter()
+        let that_input = self.buf.pop_front()
+            .expect("Empty InputBuffer?!");
+
+        (that_input, self.buf.iter())
     }
 }
