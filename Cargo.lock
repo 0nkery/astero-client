@@ -305,7 +305,7 @@ dependencies = [
  "openssl-probe 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-sys 0.9.24 (registry+https://github.com/rust-lang/crates.io-index)",
  "schannel 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "socket2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "socket2 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1453,7 +1453,7 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.3.0"
+version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1899,7 +1899,7 @@ dependencies = [
 "checksum slab 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fdeff4cd9ecff59ec7e3744cbca73dfe5ac35c2aedb2cfba8a1c715a18912e9d"
 "checksum smallvec 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "ee4f357e8cd37bf8822e1b964e96fd39e2cb5a0424f8aaa284ccaccc2162411c"
 "checksum smart-default 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3e7392ae8cdf79428cc98170bf264af7219887def8a30bb61d7ad2200313e88d"
-"checksum socket2 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cf5d5aa364bf61a0d744a293da20381617b6445b89eb524800fab857c5aed2d8"
+"checksum socket2 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "a76b792959eba82f021c9028c8ecb6396f085268d6d46af2ed96a829cc758d7c"
 "checksum specs 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a210dc96ea065cb88391aa6956ed1b2a14051c668b5bc18bac66a95c215b639f"
 "checksum specs-derive 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6867820875f5348cf37d14786f35e406870706cc587d30315dbbf6c92958207a"
 "checksum stb_truetype 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "21b5c3b588a493a477e0d99769ee091b3627625f9ba4bdd882e6b4b0b0958805"
