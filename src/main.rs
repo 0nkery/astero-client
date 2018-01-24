@@ -89,6 +89,7 @@ struct MainState<'a, 'b> {
 
     time_acc: f64,
     last_server_update_timestamp: u64,
+    last_local_update_timestamp: u64,
     player_id: i64,
 }
 
@@ -134,6 +135,7 @@ impl<'a, 'b> MainState<'a, 'b> {
 
             time_acc: 0.0,
             last_server_update_timestamp: 0,
+            last_local_update_timestamp: 0,
             player_id: -1,
         };
 
@@ -342,6 +344,9 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
             self.dispatcher.dispatch(&self.world.res);
             self.time_acc -= constant::physics::DELTA_TIME;
         }
+
+        // Timestamp for Server Reconciliation
+        self.last_local_update_timestamp = util::cur_time_in_millis();
 
         Ok(())
     }
