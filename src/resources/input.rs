@@ -109,12 +109,14 @@ pub struct PendingInput {
 
 pub struct InputBuffer {
     buf: VecDeque<PendingInput>,
+    sequence_number: u32,
 }
 
 impl InputBuffer {
     pub fn new() -> Self {
         Self {
             buf: VecDeque::new(),
+            sequence_number: 0,
         }
     }
 
@@ -126,7 +128,7 @@ impl InputBuffer {
         });
     }
 
-    pub fn state_after(&mut self, timestamp: u64) -> impl Iterator<Item=&PendingInput> {
+    pub fn get_state_after(&mut self, timestamp: u64) -> impl Iterator<Item=&PendingInput> {
         if self.buf[0].timestamp < timestamp {
             while self.buf[0].timestamp <= timestamp {
                 self.buf.pop_front();
@@ -134,5 +136,13 @@ impl InputBuffer {
         }
 
         self.buf.iter()
+    }
+
+    pub fn get_sequence_number(&self) -> u32 {
+        self.sequence_number
+    }
+
+    pub fn increase_sequence_number(&mut self) {
+        self.sequence_number.wrapping_add(1);
     }
 }
