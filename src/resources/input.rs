@@ -122,7 +122,7 @@ impl InputBuffer {
     }
 
     pub fn add(&mut self, input: Input, body: Body) -> u32 {
-        self.sequence_number += 1;
+        self.sequence_number = self.sequence_number.wrapping_add(1);
 
         self.buf.push_back(PendingInput {
             sequence_num: self.sequence_number,
