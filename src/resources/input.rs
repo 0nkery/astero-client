@@ -135,10 +135,8 @@ impl InputBuffer {
     }
 
     pub fn get_state_after(&mut self, sequence_number: u32) -> impl Iterator<Item=&PendingInput> {
-        if self.buf[0].sequence_number <= sequence_number {
-            while self.buf[0].sequence_number <= sequence_number {
-                self.buf.pop_front();
-            }
+        while self.buf[0].sequence_number <= sequence_number {
+            self.buf.pop_front();
         }
 
         self.buf.iter()
