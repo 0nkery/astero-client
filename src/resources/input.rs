@@ -102,6 +102,7 @@ impl Input {
 
 
 pub struct PendingInput {
+    sequence_num: u32,
     timestamp: u64,
     input: Input,
     body: Body,
@@ -120,12 +121,17 @@ impl InputBuffer {
         }
     }
 
-    pub fn add(&mut self, input: Input, body: Body) {
+    pub fn add(&mut self, input: Input, body: Body) -> u32 {
+        self.sequence_number += 1;
+
         self.buf.push_back(PendingInput {
+            sequence_num: self.sequence_number,
             timestamp: cur_time_in_millis(),
             input,
             body,
         });
+
+        self.sequence_number
     }
 
     pub fn get_state_after(&mut self, timestamp: u64) -> impl Iterator<Item=&PendingInput> {
@@ -136,13 +142,5 @@ impl InputBuffer {
         }
 
         self.buf.iter()
-    }
-
-    pub fn get_sequence_number(&self) -> u32 {
-        self.sequence_number
-    }
-
-    pub fn increase_sequence_number(&mut self) {
-        self.sequence_number.wrapping_add(1);
     }
 }

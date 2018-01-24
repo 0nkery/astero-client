@@ -6,7 +6,7 @@ use ggez::graphics::{
 use proto::astero;
 
 
-#[derive(Component, Debug)]
+#[derive(Component, Debug, Clone)]
 pub struct Body {
     pub pos: Point2,
     pub vel: Vector2,

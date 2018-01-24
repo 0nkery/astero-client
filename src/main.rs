@@ -87,6 +87,7 @@ struct MainState<'a, 'b> {
     dispatcher: Dispatcher<'a, 'b>,
 
     time_acc: f64,
+    pending_inputs: resources::InputBuffer,
 }
 
 impl<'a, 'b> MainState<'a, 'b> {
@@ -128,6 +129,7 @@ impl<'a, 'b> MainState<'a, 'b> {
             dispatcher,
 
             time_acc: 0.0,
+            pending_inputs: resources::InputBuffer::new(),
         };
 
         Ok(s)
@@ -140,6 +142,22 @@ impl<'a, 'b> MainState<'a, 'b> {
         let y = height - (point.y + height / 2.0);
 
         graphics::Point2::new(x, y)
+    }
+
+    fn update_input(&mut self, cur_input: resources::Input, maybe_update: Option<proto::astero::Input>) {
+        use specs::Join;
+
+        if let Some(mut update) = maybe_update {
+            let bodies = self.world.read::<components::Body>();
+            let controllable = self.world.read::<components::Controllable>();
+
+            let (body, _controllable) = (&bodies, &controllable).join().next()
+                .expect("Controllable player not found?!");
+
+            update.sequence_num = self.pending_inputs.add(cur_input, body.clone());
+
+            self.client.send(msg::Msg::ToServer(update.into()));
+        }
     }
 
     fn handle_message(&mut self, ctx: &mut Context, msg: msg::Msg) -> GameResult<()> {
@@ -334,21 +352,25 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
             return;
         }
 
-        let mut input = self.world.write_resource::<resources::Input>();
-        let maybe_update = input.key_down(keycode, repeat);
+        let (input, maybe_update) = {
+            let mut input = self.world.write_resource::<resources::Input>();
+            let maybe_update = input.key_down(keycode, repeat);
 
-        if let Some(update) = maybe_update {
-            self.client.send(msg::Msg::ToServer(update.into()));
-        }
+            (input.clone(), maybe_update)
+        };
+
+        self.update_input(input, maybe_update);
     }
 
     fn key_up_event(&mut self, _ctx: &mut Context, keycode: Keycode, _keymod: Mod, _repeat: bool) {
-        let mut input = self.world.write_resource::<resources::Input>();
-        let maybe_update = input.key_up(keycode);
+        let (input, maybe_update) = {
+            let mut input = self.world.write_resource::<resources::Input>();
+            let maybe_update = input.key_up(keycode);
 
-        if let Some(update) = maybe_update {
-            self.client.send(msg::Msg::ToServer(update.into()));
-        }
+            (input.clone(), maybe_update)
+        };
+
+        self.update_input(input, maybe_update);
     }
 
     fn quit_event(&mut self, _ctx: &mut Context) -> bool {
