@@ -80,14 +80,15 @@ use proto::astero;
 
 
 struct MainState<'a, 'b> {
-    assets: resources::Assets,
-    client: resources::Client,
-
     world: World,
     dispatcher: Dispatcher<'a, 'b>,
 
-    time_acc: f64,
+    assets: resources::Assets,
+    client: resources::Client,
     pending_inputs: resources::InputBuffer,
+
+    time_acc: f64,
+    last_server_update_timestamp: u64,
 }
 
 impl<'a, 'b> MainState<'a, 'b> {
@@ -130,6 +131,7 @@ impl<'a, 'b> MainState<'a, 'b> {
 
             time_acc: 0.0,
             pending_inputs: resources::InputBuffer::new(),
+            last_server_update_timestamp: 0,
         };
 
         Ok(s)
@@ -240,6 +242,12 @@ impl<'a, 'b> MainState<'a, 'b> {
                         }
                     },
                     astero::server::Msg::List(updates) => {
+                        if updates.timestamp < self.last_server_update_timestamp {
+                            return Ok(());
+                        }
+
+                        self.last_server_update_timestamp = updates.timestamp;
+
                         // TODO: figure out how to update entities
                     },
                 }
