@@ -249,6 +249,7 @@ impl<'a, 'b> MainState<'a, 'b> {
                             match entity {
                                 astero::update::Entity::Player(player) => {
                                     if self.player_id == i64::from(player.id) {
+                                        // Server Reconciliation
                                         let mut bodies = self.world.write::<components::Body>();
                                         let controllable = self.world.read::<components::Controllable>();
 
@@ -278,7 +279,7 @@ impl<'a, 'b> MainState<'a, 'b> {
                                             delta_start_timestamp = pending.timestamp;
                                         }
                                     } else {
-
+                                        // Entity Interpolation
                                     }
                                 }
                                 astero::update::Entity::Asteroid(asteroid) => {
