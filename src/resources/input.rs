@@ -1,6 +1,10 @@
+use std::collections::VecDeque;
+
 use ggez::event::Keycode;
 
+use components::Body;
 use proto::astero;
+use util::cur_time_in_millis;
 
 
 #[derive(Clone)]
@@ -93,5 +97,42 @@ impl Input {
         }
 
         msg
+    }
+}
+
+
+pub struct PendingInput {
+    timestamp: u64,
+    input: Input,
+    body: Body,
+}
+
+pub struct InputBuffer {
+    buf: VecDeque<PendingInput>,
+}
+
+impl InputBuffer {
+    pub fn new() -> Self {
+        Self {
+            buf: VecDeque::new(),
+        }
+    }
+
+    pub fn add(&mut self, input: Input, body: Body) {
+        self.buf.push_back(PendingInput {
+            timestamp: cur_time_in_millis(),
+            input,
+            body,
+        });
+    }
+
+    pub fn state_after(&mut self, timestamp: u64) -> impl Iterator<Item=&PendingInput> {
+        if self.buf[0].timestamp < timestamp {
+            while self.buf[0].timestamp <= timestamp {
+                self.buf.pop_front();
+            }
+        }
+
+        self.buf.iter()
     }
 }

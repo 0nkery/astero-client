@@ -9,5 +9,9 @@ pub use self::assets::{
     SpriteKind,
 };
 pub use self::client::Client;
-pub use self::input::Input;
+pub use self::input::{
+    Input,
+    PendingInput,
+    InputBuffer,
+};
 pub use self::server_clock::ServerClock;

@@ -3,7 +3,6 @@
 
 #![cfg_attr(feature="clippy", warn(use_self))]
 #![cfg_attr(feature="clippy", warn(wrong_pub_self_convention))]
-#![cfg_attr(feature="clippy", warn(stutter))]
 #![cfg_attr(feature="clippy", warn(single_match_else))]
 #![cfg_attr(feature="clippy", warn(similar_names))]
 #![cfg_attr(feature="clippy", warn(result_unwrap_used))]
@@ -26,6 +25,7 @@
 #![feature(ip_constructors)]
 #![feature(use_nested_groups)]
 #![feature(entry_and_modify)]
+#![feature(conservative_impl_trait)]
 
 extern crate ggez;
 extern crate specs;
