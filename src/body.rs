@@ -18,24 +18,6 @@ pub struct Body {
 }
 
 impl Body {
-    pub fn new(body: &astero::Body) -> Self {
-        Self {
-            pos: body.pos.into(),
-            vel: body.vel.into(),
-            rot: body.rot.unwrap_or(0.0),
-            rvel: body.rvel.unwrap_or(0.0),
-            size: body.size.unwrap_or(0.0),
-        }
-    }
-
-    pub fn update(&mut self, body: &astero::Body) {
-        self.pos = body.pos.into();
-        self.vel = body.vel.into();
-        self.rot = body.rot.unwrap_or(self.rot);
-        self.rvel = body.rvel.unwrap_or(self.rvel);
-        self.size = body.size.unwrap_or(self.size);
-    }
-
     pub fn update_position(&mut self, dt: f32) {
         if self.size <= 0.0 {
             return;
