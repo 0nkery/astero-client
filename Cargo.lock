@@ -445,7 +445,7 @@ dependencies = [
 
 [[package]]
 name = "getopts"
-version = "0.2.15"
+version = "0.2.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -1176,7 +1176,7 @@ version = "0.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "bitflags 0.9.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "getopts 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "getopts 0.2.16 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -1780,7 +1780,7 @@ dependencies = [
 "checksum fuchsia-zircon-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
 "checksum futures 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)" = "118b49cac82e04121117cbd3121ede3147e885627d82c4546b87c702debb90c1"
 "checksum generic-array 0.8.3 (registry+https://github.com/rust-lang/crates.io-index)" = "fceb69994e330afed50c93524be68c42fa898c2d9fd4ee8da03bd7363acd26f2"
-"checksum getopts 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)" = "65922871abd2f101a2eb0eaebadc66668e54a87ad9c3dd82520b5f86ede5eff9"
+"checksum getopts 0.2.16 (registry+https://github.com/rust-lang/crates.io-index)" = "53adb5b6e45d9dc2179219b30571a848b5681faea989f43e4fb5a2e4cda29f7f"
 "checksum gfx 0.16.3 (registry+https://github.com/rust-lang/crates.io-index)" = "5f21df412363e606c7c055c8b0444a81b17cd69b795a0c8619620b6fca74d093"
 "checksum gfx_core 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)" = "ceb99b721c3b5c30585d5bb33283c21bcd7c8feb29f0791b7372c3b006822c9b"
 "checksum gfx_device_gl 0.14.6 (registry+https://github.com/rust-lang/crates.io-index)" = "5f45e315f63439d0b1e2210a6a386a65fb0ed7ade4fc2bae57ad34d18073d8c1"
