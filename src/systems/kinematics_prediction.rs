@@ -9,13 +9,18 @@ pub struct KinematicsPrediction;
 
 impl<'a> specs::System<'a> for KinematicsPrediction {
     type SystemData = (
+        specs::Fetch<'a, resources::CurrentSystemRunMode>,
         specs::Fetch<'a, resources::Input>,
         specs::WriteStorage<'a, components::Body>,
         specs::ReadStorage<'a, components::Controllable>,
         specs::ReadStorage<'a, components::Accelerator>,
     );
 
-    fn run(&mut self, (input, mut bodies, controllable, accelerators): Self::SystemData) {
+    fn run(&mut self, (run_mode, input, mut bodies, controllable, accelerators): Self::SystemData) {
+        if let resources::SystemRunMode::Interpolation(..) = run_mode.0 {
+            return;
+        }
+
         use specs::Join;
 
         for (_cntrl, body, accel) in (&controllable, &mut bodies, &accelerators).join() {

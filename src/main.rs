@@ -26,6 +26,7 @@
 #![feature(use_nested_groups)]
 #![feature(entry_and_modify)]
 #![feature(conservative_impl_trait)]
+#![feature(match_default_bindings)]
 
 extern crate ggez;
 extern crate specs;
@@ -102,6 +103,7 @@ impl<'a, 'b> MainState<'a, 'b> {
 
         world.add_resource(resources::Input::new());
         world.add_resource(resources::ServerClock::new());
+        world.add_resource(resources::CurrentSystemRunMode);
 
         world.register::<components::Sprite>();
         world.register::<components::Body>();
@@ -114,9 +116,11 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::NetworkId>();
         world.register::<components::TimeToLive>();
         world.register::<components::Accelerator>();
+        world.register::<components::InterpolationBuffer>();
 
         let dispatcher = DispatcherBuilder::new()
             .add(systems::KinematicsPrediction, "KinematicsPrediction", &[])
+            .add(systems::Interpolation, "Interpolation", &[])
             .build();
 
         let nickname = util::cur_user_name();
@@ -207,6 +211,7 @@ impl<'a, 'b> MainState<'a, 'b> {
                                         &self.assets.small_font
                                     )?)
                                     .with(components::NetworkId(other.id))
+                                    .with(components::InterpolationBuffer::new())
                                     .build();
                             }
                             astero::create::Entity::Asteroid(ref asteroid) => {
@@ -217,6 +222,7 @@ impl<'a, 'b> MainState<'a, 'b> {
                                     .with(components::StickyHealthBar {})
                                     .with(components::Sprite(resources::SpriteKind::Asteroid))
                                     .with(components::NetworkId(asteroid.id))
+                                    .with(components::InterpolationBuffer::new())
                                     .build();
                             }
                             astero::create::Entity::Shot(ref shot) => {
@@ -249,38 +255,55 @@ impl<'a, 'b> MainState<'a, 'b> {
                         }
                         self.last_server_update_timestamp = updates.timestamp;
 
-                        for update in updates.update_list {
-                            let entity = update.entity.expect("Got empty entity update from server");
-                            match entity {
-                                astero::update::Entity::Player(player) => {
-                                    if self.player_id == i64::from(player.id) {
-                                        // Server Reconciliation
-                                        let mut bodies = self.world.write::<components::Body>();
-                                        let controllable = self.world.read::<components::Controllable>();
+                        let entities = self.world.entities();
+                        let network_ids = self.world.read::<components::NetworkId>();
+                        let mut bodies = self.world.write::<components::Body>();
+                        let mut interp_buffers = self.world.write::<components::InterpolationBuffer>();
 
-                                        let (body, _) = (&mut bodies, &controllable).join().next()
-                                            .expect("Controllable player not found?!");
-                                        *body = components::Body::new(&player.body);
+                        for (ent, network_id, ) in (&*entities, &network_ids, ).join() {
+                            let maybe_update = updates.updates.get(&network_id.0);
 
-                                        let last_handled_input = player.last_handled_input
-                                            .expect("Got empty last handled input from server");
+                            if let Some(update) = maybe_update {
+                                let entity = update.entity.as_ref().expect("Got empty entity update from server");
 
-                                        for pending in self.pending_inputs.get_state_after(last_handled_input) {
+                                match entity {
+                                    astero::update::Entity::Player(player)
+                                    if self.player_id == i64::from(player.id) => {
+                                        let maybe_body = bodies.get_mut(ent);
+                                        if let Some(body) = maybe_body {
+                                            *body = components::Body::new(&player.body);
+
                                             {
-                                                let mut input = self.world.write_resource::<resources::Input>();
-                                                *input = pending.input.clone();
+                                                let mut cur_sys_run_mode = self.world.write_resource::<resources::CurrentSystemRunMode>();
+                                                cur_sys_run_mode.0 = resources::SystemRunMode::Reconciliation;
                                             }
 
-                                            for _ in 0..pending.full_update_steps {
-                                                self.dispatcher.dispatch(&self.world.res);
+                                            let last_handled_input = player.last_handled_input
+                                                .expect("Got empty last handled input from server");
+
+                                            for pending in self.pending_inputs.get_state_after(last_handled_input) {
+                                                {
+                                                    let mut input = self.world.write_resource::<resources::Input>();
+                                                    *input = pending.input.clone();
+                                                }
+
+                                                for _ in 0..pending.full_update_steps {
+                                                    self.dispatcher.dispatch(&self.world.res);
+                                                }
                                             }
                                         }
-                                    } else {
-                                        // Entity Interpolation
                                     }
-                                }
-                                astero::update::Entity::Asteroid(asteroid) => {
 
+                                    astero::update::Entity::Player(player) => {
+                                        let interp_buf = interp_buffers.get_mut(ent)
+                                            .expect("No interpolation buffer attached to remote player?!");
+                                        interp_buf.add(&player.body);
+                                    }
+                                    astero::update::Entity::Asteroid(asteroid) => {
+                                        let interp_buf = interp_buffers.get_mut(ent)
+                                            .expect("No interpolation buffer attached to remote asteroid?!");
+                                        interp_buf.add(&asteroid.body);
+                                    }
                                 }
                             }
                         }
@@ -328,6 +351,11 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
         let frame_time = timer::get_delta(ctx);
         let frame_time = timer::duration_to_f64(frame_time) as f32;
 
+        {
+            let mut cur_system_run_mode = self.world.write_resource::<resources::CurrentSystemRunMode>();
+            cur_system_run_mode.0 = resources::SystemRunMode::Prediction;
+        }
+
         self.time_acc += frame_time;
 
         while self.time_acc > constant::physics::DELTA_TIME {
@@ -343,6 +371,16 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
         use specs::Join;
 
         graphics::clear(ctx);
+
+        {
+            let mut cur_sys_run_mode = self.world.write_resource::<resources::CurrentSystemRunMode>();
+            cur_sys_run_mode.0 = resources::SystemRunMode::Interpolation(
+                util::cur_time_in_millis() - 1000 / 30,
+                self.time_acc
+            );
+        }
+
+        self.dispatcher.dispatch(&self.world.res);
 
         let bodies = self.world.read::<components::Body>();
         let sprites = self.world.read::<components::Sprite>();

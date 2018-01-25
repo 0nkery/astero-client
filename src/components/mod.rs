@@ -3,6 +3,7 @@ mod body;
 mod color;
 mod controllable;
 mod health_bar;
+mod interpolation_buffer;
 mod life;
 mod network_id;
 mod nickname;
@@ -15,6 +16,10 @@ pub use self::controllable::Controllable;
 pub use self::{
     health_bar::Sticky as StickyHealthBar,
     health_bar::Static as StaticHealthBar,
+};
+pub use self::interpolation_buffer::{
+    InterpolationBuffer,
+    InterpolationPosition,
 };
 pub use self::life::{
     Life,

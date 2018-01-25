@@ -78,4 +78,10 @@ impl Body {
         let acceleration = dir_vec * accel_value;
         self.vel += acceleration * dt;
     }
+
+    pub fn interpolate_to(&mut self, other: &Self, by_dt: f32) {
+        self.pos.x += (other.pos.x - self.pos.x) * by_dt;
+        self.pos.y += (other.pos.y - self.pos.y) * by_dt;
+        self.rot += (other.rot - self.rot) * by_dt;
+    }
 }
