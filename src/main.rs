@@ -103,7 +103,6 @@ impl<'a, 'b> MainState<'a, 'b> {
 
         world.add_resource(resources::Input::new());
         world.add_resource(resources::ServerClock::new());
-        world.add_resource(resources::DeltaTime(0.0));
 
         world.register::<components::Sprite>();
         world.register::<components::Body>();
@@ -262,23 +261,15 @@ impl<'a, 'b> MainState<'a, 'b> {
                                         let last_handled_input = player.last_handled_input
                                             .expect("Got empty last handled input from server");
 
-                                        let (handled_input, pending_inputs) = self.pending_inputs.get_state_after(last_handled_input);
-
-                                        let mut delta_start_timestamp = handled_input.timestamp;
-
-                                        for pending in pending_inputs {
-                                            {
-                                                let mut delta_time = self.world.write_resource::<resources::DeltaTime>();
-                                                delta_time.0 = (pending.timestamp - delta_start_timestamp) as f64 / 1000.0;
-                                            }
-
+                                        for pending in self.pending_inputs.get_state_after(last_handled_input) {
                                             {
                                                 let mut input = self.world.write_resource::<resources::Input>();
                                                 *input = pending.input.clone();
                                             }
 
-                                            self.dispatcher.dispatch(&self.world.res);
-                                            delta_start_timestamp = pending.timestamp;
+                                            for _ in 0..pending.full_update_steps {
+                                                self.dispatcher.dispatch(&self.world.res);
+                                            }
                                         }
                                     } else {
                                         // Entity Interpolation
@@ -335,13 +326,9 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
         self.time_acc += frame_time;
 
-        {
-            let mut delta_time = self.world.write_resource::<resources::DeltaTime>();
-            delta_time.0 = constant::physics::DELTA_TIME;
-        }
-
         while self.time_acc > constant::physics::DELTA_TIME {
             self.dispatcher.dispatch(&self.world.res);
+            self.pending_inputs.increase_update_step();
             self.time_acc -= constant::physics::DELTA_TIME;
         }
 

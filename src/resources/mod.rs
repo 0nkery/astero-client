@@ -1,6 +1,5 @@
 mod assets;
 mod client;
-mod delta_time;
 mod input;
 mod server_clock;
 
@@ -10,7 +9,6 @@ pub use self::assets::{
     SpriteKind,
 };
 pub use self::client::Client;
-pub use self::delta_time::DeltaTime;
 pub use self::input::{
     Input,
     PendingInput,
