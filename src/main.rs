@@ -87,9 +87,8 @@ struct MainState<'a, 'b> {
     client: resources::Client,
     pending_inputs: resources::InputBuffer,
 
-    time_acc: f64,
+    time_acc: f32,
     last_server_update_timestamp: u64,
-    last_local_update_timestamp: u64,
     player_id: i64,
 }
 
@@ -114,8 +113,10 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::Controllable>();
         world.register::<components::NetworkId>();
         world.register::<components::TimeToLive>();
+        world.register::<components::Accelerator>();
 
         let dispatcher = DispatcherBuilder::new()
+            .add(systems::KinematicsPrediction, "KinematicsPrediction", &[])
             .build();
 
         let nickname = util::cur_user_name();
@@ -134,7 +135,6 @@ impl<'a, 'b> MainState<'a, 'b> {
 
             time_acc: 0.0,
             last_server_update_timestamp: 0,
-            last_local_update_timestamp: 0,
             player_id: -1,
         };
 
@@ -166,6 +166,10 @@ impl<'a, 'b> MainState<'a, 'b> {
 
                 self.world.create_entity()
                     .with(components::Body::new(&cur_player.body))
+                    .with(components::Accelerator::new(
+                        constant::physics::PLAYER_ACCELERATION,
+                        constant::physics::PLAYER_DECELERATION
+                    ))
                     .with(components::Color(constant::colors::GREEN))
                     .with(components::Life::new(cur_player.life.expect("Got empty life from server")))
                     .with(components::StaticHealthBar::new(
@@ -322,7 +326,7 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
         }
 
         let frame_time = timer::get_delta(ctx);
-        let frame_time = timer::duration_to_f64(frame_time);
+        let frame_time = timer::duration_to_f64(frame_time) as f32;
 
         self.time_acc += frame_time;
 
@@ -331,9 +335,6 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
             self.pending_inputs.increase_update_step();
             self.time_acc -= constant::physics::DELTA_TIME;
         }
-
-        // Timestamp for Server Reconciliation
-        self.last_local_update_timestamp = util::cur_time_in_millis();
 
         Ok(())
     }

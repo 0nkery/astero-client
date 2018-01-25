@@ -7,9 +7,9 @@ use proto::astero;
 
 #[derive(Clone)]
 pub struct Input {
-    turn: i32,
-    accel: i32,
-    fire: bool,
+    pub turn: i32,
+    pub accel: i32,
+    pub fire: bool,
 }
 
 impl Input {

@@ -1,3 +1,4 @@
+mod accelerator;
 mod body;
 mod color;
 mod controllable;
@@ -7,6 +8,7 @@ mod network_id;
 mod nickname;
 mod sprite;
 
+pub use self::accelerator::Accelerator;
 pub use self::body::Body;
 pub use self::color::Color;
 pub use self::controllable::Controllable;

@@ -27,12 +27,11 @@ pub mod colors {
 //pub const PLAYER_LIFE: f32 = 3.0;
 //pub const ROCK_LIFE: f32 = 2.0;
 
-pub const PLAYER_ACCELERATION: f32 = 60.0;
-pub const PLAYER_DECELERATION: f32 = 10.0;
-
 pub mod physics {
     pub const MAX_VEL: f32 = 250.0;
-    pub const DELTA_TIME: f64 = 0.01;
+    pub const DELTA_TIME: f32 = 0.01;
+    pub const PLAYER_ACCELERATION: f32 = 60.0;
+    pub const PLAYER_DECELERATION: f32 = 10.0;
 }
 
 pub mod hud {
