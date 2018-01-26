@@ -117,6 +117,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::TimeToLive>();
         world.register::<components::Accelerator>();
         world.register::<components::InterpolationBuffer>();
+        world.register::<components::BlenderBody>();
 
         let dispatcher = DispatcherBuilder::new()
             .add(systems::KinematicsPrediction, "KinematicsPrediction", &[])
@@ -170,6 +171,7 @@ impl<'a, 'b> MainState<'a, 'b> {
 
                 self.world.create_entity()
                     .with(components::Body::new(&cur_player.body))
+                    .with(components::BlenderBody::new())
                     .with(components::Accelerator::new(
                         constant::physics::PLAYER_ACCELERATION,
                         constant::physics::PLAYER_DECELERATION
@@ -382,12 +384,19 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
 
         self.dispatcher.dispatch(&self.world.res);
 
+        let entities = self.world.entities();
         let bodies = self.world.read::<components::Body>();
+        let blend_bodies = self.world.read::<components::BlenderBody>();
         let sprites = self.world.read::<components::Sprite>();
 
-        for (body, sprite) in (&bodies, &sprites).join() {
+        for (ent, body, sprite) in (&*entities, &bodies, &sprites).join() {
             let sprite = self.assets.get_sprite(&sprite.0);
-            let pos = self.world_to_screen_coords(ctx, body.pos);
+
+            let pos = blend_bodies.get(ent)
+                .and_then(|bb| bb.get_blended())
+                .and_then(|b| Some(b.pos))
+                .unwrap_or(body.pos);
+            let pos = self.world_to_screen_coords(ctx,pos);
 
             graphics::draw_ex(ctx, sprite, graphics::DrawParam {
                 dest: pos,

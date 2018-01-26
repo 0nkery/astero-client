@@ -85,3 +85,41 @@ impl Body {
         self.rot += (other.rot - self.rot) * by_dt;
     }
 }
+
+
+#[derive(Component, Debug)]
+pub struct BlenderBody {
+    prev: Option<Body>,
+    blended: Option<Body>,
+}
+
+impl BlenderBody {
+    pub fn new() -> Self {
+        Self {
+            prev: None,
+            blended: None,
+        }
+    }
+
+    pub fn save(&mut self, body: Body) {
+        self.prev = Some(body);
+    }
+
+    pub fn blend(&mut self, cur: &Body, blending_factor: f32) {
+        if let Some(ref prev_body) = self.prev {
+            let mut blended = cur.clone();
+
+            blended.pos.x = cur.pos.x * blending_factor + prev_body.pos.x * (1.0 - blending_factor);
+            blended.pos.y = cur.pos.y * blending_factor + prev_body.pos.y * (1.0 - blending_factor);
+            blended.rot = cur.rot * blending_factor + prev_body.rot * (1.0 - blending_factor);
+
+            self.blended = Some(blended);
+        } else {
+            self.blended = Some(cur.clone());
+        }
+    }
+
+    pub fn get_blended(&self) -> Option<&Body> {
+        self.blended.as_ref()
+    }
+}

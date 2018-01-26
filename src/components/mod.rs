@@ -10,7 +10,10 @@ mod nickname;
 mod sprite;
 
 pub use self::accelerator::Accelerator;
-pub use self::body::Body;
+pub use self::body::{
+    Body,
+    BlenderBody,
+};
 pub use self::color::Color;
 pub use self::controllable::Controllable;
 pub use self::{
