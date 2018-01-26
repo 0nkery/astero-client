@@ -159,6 +159,11 @@ impl<'a, 'b> MainState<'a, 'b> {
     fn update_input(&mut self, cur_input: resources::Input, maybe_update: Option<proto::astero::Input>) {
         if let Some(mut update) = maybe_update {
             update.sequence_num = self.pending_inputs.add(cur_input);
+            // TODO: check if it's possible to fire at the moment
+            // If so, put current body snapshot into update.
+            // Assign 'sequence_num' as temporary shot id.
+            // There should be a way to signal to firing system that
+            // all the next spawned shots should be unconfirmed by now.
             self.client.send(msg::Msg::ToServer(update.into()));
         }
     }
