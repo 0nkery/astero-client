@@ -118,6 +118,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::Accelerator>();
         world.register::<components::InterpolationBuffer>();
         world.register::<components::BlenderBody>();
+        world.register::<components::Cannon>();
 
         let dispatcher = DispatcherBuilder::new()
             .add(systems::KinematicsPrediction, "KinematicsPrediction", &[])
@@ -176,6 +177,7 @@ impl<'a, 'b> MainState<'a, 'b> {
                         constant::physics::PLAYER_ACCELERATION,
                         constant::physics::PLAYER_DECELERATION
                     ))
+                    .with(components::Cannon::new(constant::FIRE_TIMEOUT))
                     .with(components::Color(constant::colors::GREEN))
                     .with(components::Life::new(cur_player.life.expect("Got empty life from server")))
                     .with(components::StaticHealthBar::new(

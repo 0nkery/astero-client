@@ -27,6 +27,8 @@ pub mod colors {
 //pub const PLAYER_LIFE: f32 = 3.0;
 //pub const ROCK_LIFE: f32 = 2.0;
 
+pub const FIRE_TIMEOUT: f32 = 0.5;
+
 pub mod physics {
     pub const MAX_VEL: f32 = 250.0;
     pub const DELTA_TIME: f32 = 0.01;

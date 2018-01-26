@@ -1,5 +1,6 @@
 mod accelerator;
 mod body;
+mod cannon;
 mod color;
 mod controllable;
 mod health_bar;
@@ -14,6 +15,7 @@ pub use self::body::{
     Body,
     BlenderBody,
 };
+pub use self::cannon::Cannon;
 pub use self::color::Color;
 pub use self::controllable::Controllable;
 pub use self::{
