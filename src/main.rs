@@ -378,7 +378,7 @@ impl<'a, 'b> EventHandler for MainState<'a, 'b> {
             let mut cur_sys_run_mode = self.world.write_resource::<resources::CurrentSystemRunMode>();
             cur_sys_run_mode.0 = resources::SystemRunMode::Interpolation(
                 util::cur_time_in_millis() - 1000 / 30,
-                self.time_acc
+                self.time_acc / constant::physics::DELTA_TIME
             );
         }
 
