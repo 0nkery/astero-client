@@ -22,6 +22,18 @@ pub struct Body {
     pub size: f32,
 }
 
+impl Into<astero::Body> for Body {
+    fn into(self) -> astero::Body {
+        astero::Body {
+            pos: self.pos.into(),
+            vel: self.vel.into(),
+            rot: Some(self.rot),
+            rvel: Some(self.rvel),
+            size: Some(self.size),
+        }
+    }
+}
+
 impl Body {
     pub fn new(body: &astero::Body) -> Self {
         Self {

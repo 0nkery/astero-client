@@ -104,6 +104,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.add_resource(resources::Input::new());
         world.add_resource(resources::ServerClock::new());
         world.add_resource(resources::CurrentSystemRunMode);
+        world.add_resource(resources::UnconfirmedShotId(None));
 
         world.register::<components::Sprite>();
         world.register::<components::Body>();
@@ -119,6 +120,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         world.register::<components::InterpolationBuffer>();
         world.register::<components::BlenderBody>();
         world.register::<components::Cannon>();
+        world.register::<components::ShotNetworkId>();
 
         let dispatcher = DispatcherBuilder::new()
             .add(systems::KinematicsPrediction, "KinematicsPrediction", &[])
@@ -157,13 +159,26 @@ impl<'a, 'b> MainState<'a, 'b> {
     }
 
     fn update_input(&mut self, cur_input: resources::Input, maybe_update: Option<proto::astero::Input>) {
+        use specs::Join;
+
         if let Some(mut update) = maybe_update {
             update.sequence_num = self.pending_inputs.add(cur_input);
-            // TODO: check if it's possible to fire at the moment
-            // If so, put current body snapshot into update.
-            // Assign 'sequence_num' as temporary shot id.
-            // There should be a way to signal to firing system that
-            // all the next spawned shots should be unconfirmed by now.
+
+            let cannons = self.world.read::<components::Cannon>();
+            let bodies = self.world.read::<components::Body>();
+            let maybe_player = (&cannons, &bodies).join().next();
+
+            if let Some((cannon, body)) = maybe_player {
+                if cannon.ready_to_fire() {
+                    update.body_then = Some(body.clone().into());
+                }
+
+                {
+                    let mut unconfirmed_shot_id = self.world.write_resource::<resources::UnconfirmedShotId>();
+                    unconfirmed_shot_id.0 = Some(update.sequence_num);
+                }
+            }
+
             self.client.send(msg::Msg::ToServer(update.into()));
         }
     }
@@ -287,8 +302,28 @@ impl<'a, 'b> MainState<'a, 'b> {
                                                 cur_sys_run_mode.0 = resources::SystemRunMode::Reconciliation;
                                             }
 
+                                            if let Some(current_fire_timeout) = player.current_fire_timeout {
+                                                let server_clock = self.world.read_resource::<resources::ServerClock>();
+                                                let corrected_timeout = current_fire_timeout - server_clock.compensation() as f32;
+
+                                                let mut cannons = self.world.write::<components::Cannon>();
+                                                for (cannon, ) in (&mut cannons, ).join() {
+                                                    cannon.set_current_timeout(corrected_timeout);
+                                                }
+                                            }
+
                                             let last_handled_input = player.last_handled_input
                                                 .expect("Got empty last handled input from server");
+
+                                            if !player.shot_confirmed.unwrap_or(true) {
+                                                let mut unconfirmed_shots = self.world.write::<components::ShotNetworkId>();
+                                                let unconfirmed_shots = (&mut unconfirmed_shots, ).join()
+                                                    .filter(|(shot_id, )| shot_id.0 == last_handled_input);
+
+                                                for (shot_id, ) in unconfirmed_shots {
+                                                    shot_id.1 = false;
+                                                }
+                                            }
 
                                             for pending in self.pending_inputs.get_state_after(last_handled_input) {
                                                 {

@@ -30,6 +30,9 @@ pub use self::life::{
     Life,
     TimeToLive,
 };
-pub use self::network_id::NetworkId;
+pub use self::network_id::{
+    NetworkId,
+    ShotNetworkId,
+};
 pub use self::nickname::Nickname;
 pub use self::sprite::Sprite;
