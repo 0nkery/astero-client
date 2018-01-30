@@ -22,6 +22,18 @@ pub struct Body {
     pub size: f32,
 }
 
+impl Default for Body {
+    fn default() -> Self {
+        Self {
+            pos: Point2::origin(),
+            vel: Vector2::new(0.0, 0.0),
+            rot: 0.0,
+            rvel: 0.0,
+            size: 0.0,
+        }
+    }
+}
+
 impl Into<astero::Body> for Body {
     fn into(self) -> astero::Body {
         astero::Body {

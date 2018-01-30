@@ -125,6 +125,7 @@ impl<'a, 'b> MainState<'a, 'b> {
         let dispatcher = DispatcherBuilder::new()
             .add(systems::KinematicsPrediction, "KinematicsPrediction", &[])
             .add(systems::Interpolation, "Interpolation", &[])
+            .add(systems::Shooting, "Shooting", &[])
             .build();
 
         let nickname = util::cur_user_name();

@@ -29,6 +29,13 @@ pub mod colors {
 
 pub const FIRE_TIMEOUT: f32 = 0.5;
 
+pub mod shot {
+    pub const TTL: f32 = 2.0;
+    pub const SPEED: f32 = 200.0;
+    pub const SIZE: f32 = 6.0;
+}
+
+
 pub mod physics {
     pub const MAX_VEL: f32 = 250.0;
     pub const DELTA_TIME: f32 = 0.01;
