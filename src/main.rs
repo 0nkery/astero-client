@@ -126,6 +126,7 @@ impl<'a, 'b> MainState<'a, 'b> {
             .add(systems::KinematicsPrediction, "KinematicsPrediction", &[])
             .add(systems::Interpolation, "Interpolation", &[])
             .add(systems::Shooting, "Shooting", &[])
+            .add(systems::UnconfirmedShotCleanup, "UnconfirmedShotCleanup", &[])
             .build();
 
         let nickname = util::cur_user_name();
