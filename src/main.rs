@@ -317,12 +317,9 @@ impl<'a, 'b> MainState<'a, 'b> {
 
                                             if !player.shot_confirmed.unwrap_or(true) {
                                                 let mut unconfirmed_shots = self.world.write::<components::ShotNetworkId>();
-                                                let unconfirmed_shots = (&mut unconfirmed_shots, ).join()
-                                                    .filter(|(shot_id, )| shot_id.0 == last_handled_input);
-
-                                                for (shot_id, ) in unconfirmed_shots {
-                                                    shot_id.1 = false;
-                                                }
+                                                (&mut unconfirmed_shots, ).join()
+                                                    .filter(|(shot_id, )| shot_id.0 == last_handled_input)
+                                                    .for_each(|(shot_id, )| shot_id.1 = false);
                                             }
 
                                             for pending in self.pending_inputs.get_state_after(last_handled_input) {
